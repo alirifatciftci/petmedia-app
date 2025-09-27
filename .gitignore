@@ -1,0 +1,267 @@
+# dependencies
+node_modules/
+package-lock.json
+
+# expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# build outputs
+build/
+.next/
+.nuxt/
+.vuepress/dist/
+
+# cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output/
+
+# dependency directories
+jspm_packages/
+
+# optional npm cache directory
+.npm
+
+# optional eslint cache
+.eslintcache
+
+# microsoft vscode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# jetbrains ides
+.idea/
+
+# os generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macos
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+.env
+
+# typescript
+*.tsbuildinfo
+
+# Windows system files
+*.lnk
+*.url
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# User directories and files
+../../
+../../../
+
+# Android development
+.android/
+.gradle/
+
+# Development tools
+.bun/
+.cursor/
+.degit/
+
+# Cache and temporary files
+*.cache
+*.tmp
+*.temp
+
+# Media files
+*.mp3
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.mkv
+*.m4a
+*.wav
+*.aac
+*.ogg
+
+# Image files (except project assets)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+*.ico
+*.webp
+
+# Document files
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+*.txt
+*.rtf
+
+# Archive files
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.bz2
+
+# Executable files
+*.exe
+*.msi
+*.dmg
+*.pkg
+*.deb
+*.rpm
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuration files
+*.ini
+*.cfg
+*.conf
+*.config
+
+# Log files
+*.log
+*.out
+*.err
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# IDE and editor files
+*.sublime-*
+*.code-workspace
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Project specific exclusions
+# Keep only essential project files
+!app/
+!components/
+!hooks/
+!locales/
+!services/
+!stores/
+!theme/
+!types/
+!package.json
+!app.json
+!tsconfig.json
+!README.md
+!.gitignore
+
+# Ignore everything outside project directory
+../../
+../../../
+../../../
+
+# Ignore all user directories
+AppData/
+Contacts/
+Desktop/
+Documents/
+Downloads/
+Favorites/
+Intel/
+IntelGraphicsProfiles/
+Links/
+Music/
+OneDrive/
+Pictures/
+"Saved Games/"
+Searches/
+Videos/
+YerelEtkinlikler/
+coder/
+fotogaleri/
+growin/
+hola-master/
+listfy/
+movieclub/
+my-next-app/
+my-typescript-project/
+nore-app/
+nore-web-admin-1/
+nore-web-admin/
+scrimba-react/
+source/
+
+# Ignore all system files
+NTUSER.DAT*
+ntuser.dat*
+ntuser.ini
+
+# Ignore all project files outside current directory
+project-bolt-sb1-*/
+react-native-events-app/
+MyWebApp/

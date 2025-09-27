@@ -1,0 +1,71 @@
+{
+  "common": {
+    "login": "Login",
+    "logout": "Logout",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete", 
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error occurred",
+    "retry": "Retry",
+    "search": "Search...",
+    "filter": "Filter"
+  },
+  "brand": {
+    "name": "PETMEDIA",
+    "tagline": "We don't leave our friends alone."
+  },
+  "features": {
+    "findHome": {
+      "title": "Find Home for Our Friends",
+      "description": "Find a warm home for our homeless friends"
+    },
+    "findFriend": {
+      "title": "Find Friends for Our Pets",
+      "description": "Connect with our street friends"
+    },
+    "foodWater": {
+      "title": "One bowl of food\nOne bowl of water",
+      "description": "Meet the basic needs of our street friends"
+    }
+  },
+  "mission": {
+    "headline": "We don't leave our friends alone.",
+    "description": "The \"One Bowl of Food, One Bowl of Water\" movement has started!\nWe believe we can make a big difference with a small touch for our street friends. As PetMedia, we encourage everyone to support our animal friends by placing a bowl of food and a bowl of water in front of their house.\nA small bowl, a big kindness!"
+  },
+  "navigation": {
+    "home": "Home",
+    "map": "Map",
+    "add": "Add", 
+    "messages": "Messages",
+    "profile": "Profile"
+  },
+  "auth": {
+    "welcomeTitle": "Welcome to PetMedia",
+    "welcomeSubtitle": "We don't leave our friends alone",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign In",
+    "signUp": "Sign Up", 
+    "forgotPassword": "Forgot Password",
+    "createAccount": "Create Account",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?"
+  },
+  "home": {
+    "title": "Friends Looking for Adoption",
+    "filters": {
+      "all": "All",
+      "cats": "Cats",
+      "dogs": "Dogs",
+      "other": "Other"
+    }
+  },
+  "profile": {
+    "myListings": "My Listings",
+    "saved": "Saved",
+    "contributions": "Contributions", 
+    "settings": "Settings"
+  }
+}

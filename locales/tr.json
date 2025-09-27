@@ -1,0 +1,71 @@
+{
+  "common": {
+    "login": "Login",
+    "logout": "Çıkış Yap",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "loading": "Yükleniyor...",
+    "error": "Hata oluştu",
+    "retry": "Tekrar Dene",
+    "search": "Ara...",
+    "filter": "Filtrele"
+  },
+  "brand": {
+    "name": "PETMEDIA",
+    "tagline": "Dostlarımızı yalnız bırakmıyoruz."
+  },
+  "features": {
+    "findHome": {
+      "title": "Dostlarımıza Yuva",
+      "description": "Sahipsiz dostlarımız için sıcak bir yuva bulun"
+    },
+    "findFriend": {
+      "title": "Dostlarımıza Arkadaş", 
+      "description": "Sokaktaki dostlarımızla bağ kurun"
+    },
+    "foodWater": {
+      "title": "Bir kap mama\nBir kap su",
+      "description": "Sokaktaki dostlarımızın temel ihtiyaçlarını karşılayın"
+    }
+  },
+  "mission": {
+    "headline": "Dostlarımızı yalnız bırakmıyoruz.",
+    "description": "\"Bir Kap Mama, Bir Kap Su\" hareketi başladı!\nSokaktaki dostlarımız için küçük bir dokunuşla büyük fark yaratabileceğimize inanıyoruz. PetMedia olarak, herkesin evinin önüne bir kap mama ve bir kap su koyarak hayvan dostlarımıza destek olmasını teşvik ediyoruz.\nKüçük bir kap, büyük bir iyilik!"
+  },
+  "navigation": {
+    "home": "Ana Sayfa",
+    "map": "Harita", 
+    "add": "Ekle",
+    "messages": "Mesajlar",
+    "profile": "Profil"
+  },
+  "auth": {
+    "welcomeTitle": "PetMedia'ya Hoş Geldiniz",
+    "welcomeSubtitle": "Dostlarımızı yalnız bırakmıyoruz",
+    "email": "E-posta",
+    "password": "Şifre",
+    "signIn": "Giriş Yap",
+    "signUp": "Kayıt Ol",
+    "forgotPassword": "Şifremi Unuttum",
+    "createAccount": "Hesap Oluştur",
+    "alreadyHaveAccount": "Zaten hesabın var mı?",
+    "dontHaveAccount": "Hesabın yok mu?"
+  },
+  "home": {
+    "title": "Sahiplenmek İsteyen Dostlarımız",
+    "filters": {
+      "all": "Hepsi",
+      "cats": "Kediler",
+      "dogs": "Köpekler", 
+      "other": "Diğer"
+    }
+  },
+  "profile": {
+    "myListings": "İlanlarım",
+    "saved": "Kaydedilenler",
+    "contributions": "Katkılarım",
+    "settings": "Ayarlar"
+  }
+}
