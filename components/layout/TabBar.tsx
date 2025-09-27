@@ -28,7 +28,7 @@ export const TabBar: React.FC<BottomTabBarProps> = ({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0 }]}>
       <LinearGradient
         colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,1)']}
         style={styles.gradient}
@@ -95,6 +95,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    backgroundColor: 'transparent',
   },
   gradient: {
     borderTopWidth: 1,
