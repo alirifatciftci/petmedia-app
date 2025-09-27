@@ -265,3 +265,9 @@ ntuser.ini
 project-bolt-sb1-*/
 react-native-events-app/
 MyWebApp/
+
+# Ignore development and config files
+.bolt/
+.env.example
+.npmrc
+.prettierrc
