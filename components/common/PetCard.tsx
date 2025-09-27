@@ -19,7 +19,7 @@ interface PetCardProps {
 }
 
 const { width } = Dimensions.get('window');
-const cardWidth = (width - theme.spacing.lg * 3) / 2;
+const cardWidth = (width - theme.spacing.lg * 2 - theme.spacing.md) / 2;
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 

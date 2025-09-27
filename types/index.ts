@@ -35,6 +35,7 @@ export const PetSchema = z.object({
   neutered: z.boolean().default(false),
   description: z.string(),
   photos: z.array(z.string()),
+  videos: z.array(z.string()).default([]),
   location: z.object({
     latitude: z.number(),
     longitude: z.number(),
@@ -52,7 +53,7 @@ export type PetSex = z.infer<typeof PetSexSchema>;
 export type PetStatus = z.infer<typeof PetStatusSchema>;
 
 // Map spot types
-export const MapSpotTypeSchema = z.enum(['food', 'water', 'both']);
+export const MapSpotTypeSchema = z.enum(['food', 'water', 'both', 'veterinary', 'shelter']);
 
 export const MapSpotSchema = z.object({
   id: z.string(),

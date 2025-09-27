@@ -13,7 +13,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import './services/i18n'; // Initialize i18n
+import '@/services/i18n'; // Initialize i18n
 
 // Create a client for React Query
 const queryClient = new QueryClient({

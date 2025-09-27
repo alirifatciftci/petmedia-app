@@ -3,6 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "jsx": "react-jsx",
+    "module": "es2022",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "esModuleInterop": true,

@@ -17,7 +17,11 @@ import {
   Navigation2, 
   Plus, 
   Droplets,
-  MapPin 
+  MapPin,
+  Heart,
+  Home,
+  Stethoscope,
+  Shield
 } from 'lucide-react-native';
 import { theme } from '../../theme';
 import { MapSpot } from '../../types';
@@ -28,8 +32,8 @@ const mockMapSpots: MapSpot[] = [
     id: '1',
     creatorId: 'user1',
     type: 'both',
-    title: 'Beşiktaş Su ve Mama Noktası',
-    note: 'Her gün saat 18:00\'da mama ve su koyuyorum',
+    title: 'Beşiktaş Dost Noktası',
+    note: 'Her gün saat 18:00\'da mama ve su koyuyorum. Sokak kedileri için güvenli alan.',
     coords: {
       latitude: 41.0425,
       longitude: 29.0071,
@@ -43,12 +47,68 @@ const mockMapSpots: MapSpot[] = [
     creatorId: 'user2',
     type: 'water',
     title: 'Kadıköy Su Noktası',
-    note: 'Temiz su kabı burada',
+    note: 'Temiz su kabı burada. Yaz aylarında özellikle aktif.',
     coords: {
       latitude: 40.9897,
       longitude: 29.0252,
     },
     contributorsCount: 8,
+    lastUpdatedAt: new Date(),
+    createdAt: new Date(),
+  },
+  {
+    id: '3',
+    creatorId: 'user3',
+    type: 'food',
+    title: 'Şişli Mama Noktası',
+    note: 'Kuru mama ve konserve mama bulabilirsiniz. Hafta sonları daha çok var.',
+    coords: {
+      latitude: 41.0608,
+      longitude: 28.9877,
+    },
+    contributorsCount: 15,
+    lastUpdatedAt: new Date(),
+    createdAt: new Date(),
+  },
+  {
+    id: '4',
+    creatorId: 'user4',
+    type: 'veterinary',
+    title: 'Acıbadem Veteriner Kliniği',
+    note: 'Sokak hayvanları için ücretsiz muayene. Acil durumlar için 7/24.',
+    coords: {
+      latitude: 40.8897,
+      longitude: 29.3452,
+    },
+    contributorsCount: 3,
+    lastUpdatedAt: new Date(),
+    createdAt: new Date(),
+  },
+  {
+    id: '5',
+    creatorId: 'user5',
+    type: 'shelter',
+    title: 'Pendik Hayvan Barınağı',
+    note: 'Sokak hayvanları için geçici barınma. Sahiplendirme hizmetleri.',
+    coords: {
+      latitude: 40.8755,
+      longitude: 29.2352,
+    },
+    contributorsCount: 25,
+    lastUpdatedAt: new Date(),
+    createdAt: new Date(),
+  },
+  {
+    id: '6',
+    creatorId: 'user6',
+    type: 'both',
+    title: 'Üsküdar Dost Noktası',
+    note: 'Mama ve su noktası. Çocuk parkı yanında, güvenli alan.',
+    coords: {
+      latitude: 41.0225,
+      longitude: 29.0152,
+    },
+    contributorsCount: 18,
     lastUpdatedAt: new Date(),
     createdAt: new Date(),
   },
@@ -117,6 +177,40 @@ export default function MapScreen() {
     );
   };
 
+  const getMarkerIcon = (type: string) => {
+    switch (type) {
+      case 'water':
+        return <Droplets size={16} color="white" fill="white" />;
+      case 'food':
+        return <Heart size={16} color="white" fill="white" />;
+      case 'both':
+        return <Home size={16} color="white" fill="white" />;
+      case 'veterinary':
+        return <Stethoscope size={16} color="white" fill="white" />;
+      case 'shelter':
+        return <Shield size={16} color="white" fill="white" />;
+      default:
+        return <MapPin size={16} color="white" fill="white" />;
+    }
+  };
+
+  const getMarkerColors = (type: string) => {
+    switch (type) {
+      case 'water':
+        return ['#3b82f6', '#1d4ed8'];
+      case 'food':
+        return [theme.colors.cards.orange, '#ea580c'];
+      case 'both':
+        return ['#8b5cf6', '#7c3aed'];
+      case 'veterinary':
+        return ['#10b981', '#059669'];
+      case 'shelter':
+        return ['#f59e0b', '#d97706'];
+      default:
+        return ['#6b7280', '#4b5563'];
+    }
+  };
+
   const renderMarker = (spot: MapSpot) => (
     <Marker
       key={spot.id}
@@ -131,20 +225,10 @@ export default function MapScreen() {
     >
       <View style={styles.markerContainer}>
         <LinearGradient
-          colors={
-            spot.type === 'water'
-              ? ['#3b82f6', '#1d4ed8']
-              : spot.type === 'food'
-              ? [theme.colors.cards.orange, '#ea580c']
-              : ['#8b5cf6', '#7c3aed']
-          }
+          colors={getMarkerColors(spot.type)}
           style={styles.marker}
         >
-          <Droplets 
-            size={16} 
-            color="white" 
-            fill="white" 
-          />
+          {getMarkerIcon(spot.type)}
         </LinearGradient>
       </View>
     </Marker>
@@ -156,9 +240,9 @@ export default function MapScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mamamatik</Text>
+        <Text style={styles.headerTitle}>🐾 Dost Noktaları</Text>
         <Text style={styles.headerSubtitle}>
-          Sokaktaki dostlarımız için mama ve su noktaları
+          Sokaktaki dostlarımız için mama, su ve yardım noktaları
         </Text>
       </View>
 
@@ -213,6 +297,14 @@ export default function MapScreen() {
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#8b5cf6' }]} />
             <Text style={styles.legendText}>İkisi</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
+            <Text style={styles.legendText}>Veteriner</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#f59e0b' }]} />
+            <Text style={styles.legendText}>Barınak</Text>
           </View>
         </View>
       </View>
