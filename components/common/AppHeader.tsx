@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { Heart } from 'lucide-react-native';
+import { PawIcon } from './PawIcon';
 import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -22,7 +22,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     <View style={styles.container}>
       {/* Logo */}
       <View style={styles.logoContainer}>
-        <Heart 
+        <PawIcon 
           size={28} 
           color={theme.colors.primary[500]} 
           fill={theme.colors.primary[500]}
