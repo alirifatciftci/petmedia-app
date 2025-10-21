@@ -1,9 +1,22 @@
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '../../stores/authStore';
+import { AuthScreen } from '../../components/auth/AuthScreen';
 import { TabBar } from '../../components/layout/TabBar';
 
 export default function TabLayout() {
   const { t } = useTranslation();
+  const { isAuthenticated } = useAuthStore();
+
+  console.log('TabLayout rendering, isAuthenticated:', isAuthenticated);
+
+  // If user is not authenticated, show auth screen
+  if (!isAuthenticated) {
+    console.log('Showing AuthScreen');
+    return <AuthScreen />;
+  }
+
+  console.log('Showing Tabs');
 
   return (
     <Tabs

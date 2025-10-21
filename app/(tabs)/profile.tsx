@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Image,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,10 +23,51 @@ import {
 } from 'lucide-react-native';
 import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
+import { EditProfileModal } from '../../components/profile/EditProfileModal';
+import { UserProfileService } from '../../services/firebase';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, logout, setUser } = useAuthStore();
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    if (!user?.id) return;
+    
+    setRefreshing(true);
+    try {
+      console.log('Refreshing profile data for user:', user.id);
+      
+      // Firestore'dan güncel profil verilerini çek
+      const profileData = await UserProfileService.getUserProfile(user.id);
+      
+      if (profileData) {
+        // Güncel verilerle user state'ini güncelle
+        const updatedUser = {
+          ...user,
+          displayName: profileData.displayName || user.displayName,
+          photoURL: (profileData.photoURL && profileData.photoURL.startsWith('http')) ? profileData.photoURL : user.photoURL,
+          city: profileData.city || user.city,
+          bio: profileData.bio || user.bio,
+          updatedAt: profileData.updatedAt || user.updatedAt,
+        };
+        
+        setUser(updatedUser);
+        console.log('Profile data refreshed:', updatedUser);
+        
+        // Başarı popup'ı göster
+        Alert.alert('✅ Güncellendi', 'Profil bilgileriniz başarıyla güncellendi!');
+      } else {
+        Alert.alert('ℹ️ Bilgi', 'Güncellenecek yeni veri bulunamadı.');
+      }
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+      Alert.alert('❌ Hata', 'Profil bilgileri güncellenirken bir hata oluştu.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const profileOptions = [
     {
@@ -85,18 +129,34 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
       
-      <ScrollView style={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.colors.primary[500]]}
+            tintColor={theme.colors.primary[500]}
+            title="Profil güncelleniyor..."
+            titleColor={theme.colors.text.secondary}
+          />
+        }
+      >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <LinearGradient
-            colors={[theme.colors.primary[500], theme.colors.primary[600]]}
-            style={styles.avatar}
-          >
-            <User size={32} color="white" />
-          </LinearGradient>
+          {user?.photoURL ? (
+            <Image source={{ uri: user.photoURL }} style={styles.profileAvatar} />
+          ) : (
+            <LinearGradient
+              colors={[theme.colors.primary[500], theme.colors.primary[600]]}
+              style={styles.avatar}
+            >
+              <User size={32} color="white" />
+            </LinearGradient>
+          )}
           
           <Text style={styles.displayName}>
-            {user?.displayName || 'Pet Lover'}
+            {user?.displayName || user?.email?.split('@')[0] || 'Pet Lover'}
           </Text>
           <Text style={styles.email}>{user?.email}</Text>
           {user?.city && (
@@ -105,6 +165,21 @@ export default function ProfileScreen() {
               <Text style={styles.location}>{user.city}</Text>
             </View>
           )}
+          {user?.bio && (
+            <View style={styles.bioContainer}>
+              <Text style={styles.bio}>{user.bio}</Text>
+            </View>
+          )}
+          
+          <TouchableOpacity 
+            style={styles.editProfileButton}
+            onPress={() => {
+              console.log('Edit profile button pressed');
+              setShowEditModal(true);
+            }}
+          >
+            <Text style={styles.editProfileText}>Profil Bilgilerini Düzenle</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Profile Options */}
@@ -143,7 +218,7 @@ export default function ProfileScreen() {
           {/* Logout */}
           <TouchableOpacity
             style={[styles.optionItem, styles.logoutItem]}
-            onPress={() => console.log('Logout')}
+            onPress={logout}
           >
             <View style={styles.optionLeft}>
               <View style={styles.optionIcon}>
@@ -156,6 +231,11 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      
+      <EditProfileModal 
+        visible={showEditModal}
+        onClose={() => setShowEditModal(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -308,5 +388,43 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: theme.colors.error[500],
+  },
+  editProfileButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: 25,
+    marginTop: theme.spacing.md,
+    borderWidth: 2,
+    borderColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  editProfileText: {
+    color: theme.colors.primary[600],
+    fontSize: theme.typography.fontSize.base,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    textAlign: 'center',
+  },
+  profileAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: 'white',
+  },
+  bioContainer: {
+    marginTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+  },
+  bio: {
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.body,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

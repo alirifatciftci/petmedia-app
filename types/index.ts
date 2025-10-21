@@ -9,8 +9,8 @@ export const UserSchema = z.object({
   city: z.string().optional(),
   bio: z.string().optional(),
   favorites: z.array(z.string()).default([]),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 export type User = z.infer<typeof UserSchema>;
