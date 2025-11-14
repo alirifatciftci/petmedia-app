@@ -317,6 +317,157 @@ export class UserProfileService {
   }
 }
 
+// Pet Service
+export class PetService {
+  static async addPet(petData: any): Promise<string> {
+    try {
+      console.log('PetService: Adding pet:', petData);
+      
+      const petsCollection = firestoreCollection(db, 'pets');
+      const dataToSave = {
+        ...petData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      const docRef = await addDoc(petsCollection, dataToSave);
+      console.log('PetService: Pet added with ID:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('PetService: Error adding pet:', error);
+      throw error;
+    }
+  }
+
+  static async getPet(petId: string) {
+    try {
+      const petRef = firestoreDoc(db, 'pets', petId);
+      const petSnap = await getDoc(petRef);
+      
+      if (petSnap.exists()) {
+        const data = petSnap.data();
+        return {
+          id: petSnap.id,
+          ...data,
+          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('PetService: Error getting pet:', error);
+      throw error;
+    }
+  }
+
+  static async getUserPets(userId: string) {
+    try {
+      const petsCollection = firestoreCollection(db, 'pets');
+      // Index gerektirmemek için sadece where kullan, orderBy'ı client-side'da yap
+      const q = query(petsCollection, where('ownerId', '==', userId));
+      const snapshot = await getDocs(q);
+      
+      const pets = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+        };
+      });
+      
+      // Client-side'da tarihe göre sırala (en yeni önce)
+      return pets.sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+        return dateB.getTime() - dateA.getTime();
+      });
+    } catch (error) {
+      console.error('PetService: Error getting user pets:', error);
+      throw error;
+    }
+  }
+
+  static async getAllPets(limitCount?: number) {
+    try {
+      const petsCollection = firestoreCollection(db, 'pets');
+      let q = query(petsCollection, orderBy('createdAt', 'desc'));
+      
+      if (limitCount) {
+        q = query(q, limit(limitCount));
+      }
+      
+      const snapshot = await getDocs(q);
+      
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+        };
+      });
+    } catch (error) {
+      console.error('PetService: Error getting all pets:', error);
+      throw error;
+    }
+  }
+
+  static async getPetsBySpecies(species: string) {
+    try {
+      const petsCollection = firestoreCollection(db, 'pets');
+      // Index gerektirmemek için sadece where kullan, orderBy'ı client-side'da yap
+      const q = query(petsCollection, where('species', '==', species));
+      const snapshot = await getDocs(q);
+      
+      const pets = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+        };
+      });
+      
+      // Client-side'da tarihe göre sırala (en yeni önce)
+      return pets.sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+        return dateB.getTime() - dateA.getTime();
+      });
+    } catch (error) {
+      console.error('PetService: Error getting pets by species:', error);
+      throw error;
+    }
+  }
+
+  static async updatePet(petId: string, updates: any) {
+    try {
+      const petRef = firestoreDoc(db, 'pets', petId);
+      await updateDoc(petRef, {
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('PetService: Error updating pet:', error);
+      throw error;
+    }
+  }
+
+  static async deletePet(petId: string) {
+    try {
+      const petRef = firestoreDoc(db, 'pets', petId);
+      await deleteDoc(petRef);
+    } catch (error) {
+      console.error('PetService: Error deleting pet:', error);
+      throw error;
+    }
+  }
+}
+
 // Initialize Firebase
 console.log('Firebase initialized with config:', firebaseConfig);
 console.log('Firebase Storage initialized:', !!storage);

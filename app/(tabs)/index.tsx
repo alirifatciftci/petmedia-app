@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Heart, 
@@ -27,116 +28,9 @@ import { PetDetailModal } from '../../components/common/PetDetailModal';
 import { PawIcon } from '../../components/common/PawIcon';
 import { usePetStore } from '../../stores/petStore';
 import { Pet } from '../../types';
+import { PetService } from '../../services/firebase';
 
 const { width } = Dimensions.get('window');
-
-// Mock data for pets
-const mockPets: Pet[] = [
-  {
-    id: '1',
-    ownerId: 'owner1',
-    species: 'dog',
-    name: 'Luna',
-    sex: 'female',
-    ageMonths: 24,
-    size: 'medium',
-    breed: 'Golden Retriever Mix',
-    city: 'İstanbul',
-    vaccinated: true,
-    neutered: true,
-    description: 'Çok sevimli ve oyuncu bir köpek. Çocuklarla çok iyi anlaşıyor.',
-    photos: [
-      'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg',
-      'https://images.pexels.com/photos/1851164/pexels-photo-1851164.jpeg',
-      'https://images.pexels.com/photos/2023384/pexels-photo-2023384.jpeg'
-    ],
-    videos: [
-      'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4'
-    ],
-    tags: ['arkadaş-canlısı', 'eğitilmiş'],
-    status: 'available',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: '2',
-    ownerId: 'owner2',
-    species: 'cat',
-    name: 'Pamuk',
-    sex: 'male',
-    ageMonths: 8,
-    size: 'small',
-    breed: 'Van Kedisi',
-    city: 'Ankara',
-    vaccinated: true,
-    neutered: false,
-    description: 'Sakin ve sevecen bir kedi. Apartman hayatına uygun.',
-    photos: [
-      'https://images.pexels.com/photos/45201/kitty-cat-kitten-pet-45201.jpeg',
-      'https://images.pexels.com/photos/104827/cat-pet-animal-domestic-104827.jpeg',
-      'https://images.pexels.com/photos/127028/pexels-photo-127028.jpeg'
-    ],
-    videos: [
-      'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4'
-    ],
-    tags: ['sakin', 'ev-kedisi'],
-    status: 'available',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: '3',
-    ownerId: 'owner3',
-    species: 'dog',
-    name: 'Karabaş',
-    sex: 'male',
-    ageMonths: 36,
-    size: 'large',
-    breed: 'Kangal',
-    city: 'İzmir',
-    vaccinated: true,
-    neutered: true,
-    description: 'Sadık ve koruyucu bir köpek. Geniş bahçeli ev arıyor.',
-    photos: [
-      'https://images.pexels.com/photos/1254140/pexels-photo-1254140.jpeg',
-      'https://images.pexels.com/photos/2023384/pexels-photo-2023384.jpeg',
-      'https://images.pexels.com/photos/1851164/pexels-photo-1851164.jpeg'
-    ],
-    videos: [
-      'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_5mb.mp4'
-    ],
-    tags: ['koruyucu', 'sadık'],
-    status: 'available',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: '4',
-    ownerId: 'owner4',
-    species: 'cat',
-    name: 'Minnoş',
-    sex: 'female',
-    ageMonths: 12,
-    size: 'small',
-    breed: 'Tekir',
-    city: 'Bursa',
-    vaccinated: true,
-    neutered: true,
-    description: 'Oyuncu ve enerjik bir kedi. Çocuklarla çok iyi anlaşır.',
-    photos: [
-      'https://images.pexels.com/photos/104827/cat-pet-animal-domestic-104827.jpeg',
-      'https://images.pexels.com/photos/127028/pexels-photo-127028.jpeg',
-      'https://images.pexels.com/photos/45201/kitty-cat-kitten-pet-45201.jpeg'
-    ],
-    videos: [
-      'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4'
-    ],
-    tags: ['oyuncu', 'çocuk-dostu', 'enerjik'],
-    status: 'available',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -150,10 +44,41 @@ export default function HomeScreen() {
   });
   const [petDetailVisible, setPetDetailVisible] = useState(false);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+  const [pets, setPets] = useState<Pet[]>([]);
+  const [loadingPets, setLoadingPets] = useState(true);
   
   const { favorites, toggleFavorite } = usePetStore();
 
-  const filteredPets = mockPets.filter(pet => {
+  const loadPets = useCallback(async () => {
+    setLoadingPets(true);
+    try {
+      let loadedPets: Pet[];
+      if (selectedFilter === 'all') {
+        loadedPets = await PetService.getAllPets() as Pet[];
+      } else {
+        loadedPets = await PetService.getPetsBySpecies(selectedFilter) as Pet[];
+      }
+      setPets(loadedPets);
+    } catch (error) {
+      console.error('Error loading pets:', error);
+      setPets([]);
+    } finally {
+      setLoadingPets(false);
+    }
+  }, [selectedFilter]);
+
+  React.useEffect(() => {
+    loadPets();
+  }, [loadPets]);
+
+  // Ekran focus olduğunda pet'leri yenile
+  useFocusEffect(
+    useCallback(() => {
+      loadPets();
+    }, [loadPets])
+  );
+
+  const filteredPets = pets.filter(pet => {
     const matchesFilter = selectedFilter === 'all' || pet.species === selectedFilter;
     return matchesFilter;
   });
@@ -318,13 +243,23 @@ export default function HomeScreen() {
 
         {/* Pets Grid */}
         <View style={styles.petsContainer}>
-          <View style={styles.petsGrid}>
-            {filteredPets.map((pet) => (
-              <View key={pet.id} style={styles.petCardWrapper}>
-                {renderPetCard({ item: pet })}
-              </View>
-            ))}
-          </View>
+          {loadingPets ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Yükleniyor...</Text>
+            </View>
+          ) : filteredPets.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Henüz ilan bulunmuyor</Text>
+            </View>
+          ) : (
+            <View style={styles.petsGrid}>
+              {filteredPets.map((pet) => (
+                <View key={pet.id} style={styles.petCardWrapper}>
+                  {renderPetCard({ item: pet })}
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -489,5 +424,23 @@ const styles = StyleSheet.create({
   petCardWrapper: {
     width: '48%',
     marginBottom: theme.spacing.md,
+  },
+  loadingContainer: {
+    padding: theme.spacing.xl,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: theme.typography.fontSize.base,
+    fontFamily: theme.typography.fontFamily.body,
+    color: theme.colors.text.secondary,
+  },
+  emptyContainer: {
+    padding: theme.spacing.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: theme.typography.fontSize.base,
+    fontFamily: theme.typography.fontFamily.body,
+    color: theme.colors.text.secondary,
   },
 });
