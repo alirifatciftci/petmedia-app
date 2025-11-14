@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   User, 
@@ -24,13 +25,46 @@ import {
 import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
-import { UserProfileService } from '../../services/firebase';
+import { UserProfileService, PetService } from '../../services/firebase';
+import { PetCard } from '../../components/common/PetCard';
+import { Pet } from '../../types';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const { user, isAuthenticated, logout, setUser } = useAuthStore();
   const [showEditModal, setShowEditModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [userPets, setUserPets] = useState<Pet[]>([]);
+  const [loadingPets, setLoadingPets] = useState(false);
+
+  const loadUserPets = useCallback(async () => {
+    if (!user?.id) return;
+    
+    setLoadingPets(true);
+    try {
+      const pets = await PetService.getUserPets(user.id);
+      setUserPets(pets as Pet[]);
+    } catch (error) {
+      console.error('Error loading user pets:', error);
+    } finally {
+      setLoadingPets(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      loadUserPets();
+    }
+  }, [isAuthenticated, user?.id, loadUserPets]);
+
+  // Ekran focus olduğunda pet'leri yenile
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated && user?.id) {
+        loadUserPets();
+      }
+    }, [isAuthenticated, user?.id, loadUserPets])
+  );
 
   const onRefresh = async () => {
     if (!user?.id) return;
@@ -56,6 +90,9 @@ export default function ProfileScreen() {
         setUser(updatedUser);
         console.log('Profile data refreshed:', updatedUser);
         
+        // Pet'leri de yenile
+        await loadUserPets();
+        
         // Başarı popup'ı göster
         Alert.alert('✅ Güncellendi', 'Profil bilgileriniz başarıyla güncellendi!');
       } else {
@@ -74,7 +111,7 @@ export default function ProfileScreen() {
       id: 'listings',
       title: t('profile.myListings'),
       icon: FileText,
-      count: 3,
+      count: userPets.length,
       onPress: () => console.log('My listings'),
     },
     {
@@ -181,6 +218,25 @@ export default function ProfileScreen() {
             <Text style={styles.editProfileText}>Profil Bilgilerini Düzenle</Text>
           </TouchableOpacity>
         </View>
+
+        {/* User's Pets */}
+        {userPets.length > 0 && (
+          <View style={styles.petsSection}>
+            <Text style={styles.sectionTitle}>İlanlarım ({userPets.length})</Text>
+            <View style={styles.petsGrid}>
+              {userPets.map((pet) => (
+                <View key={pet.id} style={styles.petCardWrapper}>
+                  <PetCard
+                    pet={pet as Pet}
+                    isFavorite={false}
+                    onPress={() => console.log('Pet pressed:', pet.id)}
+                    onFavoritePress={() => {}}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Profile Options */}
         <View style={styles.optionsContainer}>
@@ -426,5 +482,24 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  petsSection: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: theme.typography.fontSize.xl,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.md,
+  },
+  petsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  petCardWrapper: {
+    width: '48%',
+    marginBottom: theme.spacing.md,
   },
 });
