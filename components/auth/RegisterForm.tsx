@@ -7,6 +7,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { theme } from '../../theme';
@@ -60,75 +63,88 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Kayıt Ol</Text>
-      
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="E-posta"
-          placeholderTextColor={theme.colors.text.secondary}
-          value={email}
-          onChangeText={handleEmailChange}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Şifre"
-          placeholderTextColor={theme.colors.text.secondary}
-          value={password}
-          onChangeText={handlePasswordChange}
-          secureTextEntry
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Şifre Tekrar"
-          placeholderTextColor={theme.colors.text.secondary}
-          value={confirmPassword}
-          onChangeText={handleConfirmPasswordChange}
-          secureTextEntry
-        />
-      </View>
-
-      {error && (
-        <Text style={styles.errorText}>{error}</Text>
-      )}
-
-      <TouchableOpacity
-        style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={handleRegister}
-        disabled={isLoading}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
-          <ActivityIndicator color={theme.colors.text.inverse} />
-        ) : (
-          <Text style={styles.buttonText}>Kayıt Ol</Text>
+        <Text style={styles.title}>Kayıt Ol</Text>
+        
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="E-posta"
+            placeholderTextColor={theme.colors.text.secondary}
+            value={email}
+            onChangeText={handleEmailChange}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Şifre"
+            placeholderTextColor={theme.colors.text.secondary}
+            value={password}
+            onChangeText={handlePasswordChange}
+            secureTextEntry
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Şifre Tekrar"
+            placeholderTextColor={theme.colors.text.secondary}
+            value={confirmPassword}
+            onChangeText={handleConfirmPasswordChange}
+            secureTextEntry
+          />
+        </View>
+
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
         )}
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.switchButton}
-        onPress={onSwitchToLogin}
-      >
-        <Text style={styles.switchText}>
-          Zaten hesabınız var mı? <Text style={styles.switchTextBold}>Giriş Yap</Text>
-        </Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={handleRegister}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={theme.colors.text.inverse} />
+          ) : (
+            <Text style={styles.buttonText}>Kayıt Ol</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.switchButton}
+          onPress={onSwitchToLogin}
+        >
+          <Text style={styles.switchText}>
+            Zaten hesabınız var mı? <Text style={styles.switchTextBold}>Giriş Yap</Text>
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: theme.spacing.lg,
     justifyContent: 'center',
   },

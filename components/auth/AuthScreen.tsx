@@ -15,8 +15,6 @@ export const AuthScreen: React.FC = () => {
   const handleSuccessComplete = () => setShowSuccess(false);
   const handleLoginSuccess = () => setShowSuccess(true);
 
-  console.log('AuthScreen rendering, isLogin:', isLogin, 'showSuccess:', showSuccess);
-
   try {
     if (showSuccess) {
       return <SuccessScreen onComplete={handleSuccessComplete} />;
@@ -25,7 +23,6 @@ export const AuthScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.content}>
-          <Text style={styles.debugText}>AuthScreen Debug - isLogin: {isLogin ? 'true' : 'false'}</Text>
           {isLogin ? (
             <LoginForm 
               onSwitchToRegister={switchToRegister} 
@@ -54,13 +51,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  debugText: {
-    fontSize: 16,
-    color: 'red',
-    textAlign: 'center',
-    padding: 10,
-    backgroundColor: 'yellow',
   },
   errorContainer: {
     flex: 1,
