@@ -8,6 +8,9 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { theme } from '../../theme';
@@ -23,8 +26,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onLogi
   const { login, isLoading, error, clearError } = useAuthStore();
   const fadeAnim = useRef(new Animated.Value(1)).current; // Start with 1 instead of 0
   const slideAnim = useRef(new Animated.Value(0)).current; // Start with 0 instead of 50
-
-  console.log('LoginForm rendering');
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -68,94 +69,134 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onLogi
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Giriş Yap</Text>
-      <Text style={styles.debugText}>LoginForm Debug - Email: {email}</Text>
-      
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="E-posta"
-          placeholderTextColor={theme.colors.text.secondary}
-          value={email}
-          onChangeText={handleEmailChange}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Şifre"
-          placeholderTextColor={theme.colors.text.secondary}
-          value={password}
-          onChangeText={handlePasswordChange}
-          secureTextEntry
-        />
-      </View>
-
-      {error && (
-        <Text style={styles.errorText}>{error}</Text>
-      )}
-
-      <TouchableOpacity
-        style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={handleLogin}
-        disabled={isLoading}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
-          <ActivityIndicator color={theme.colors.text.inverse} />
-        ) : (
-          <Text style={styles.buttonText}>Giriş Yap</Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.emoji}>🐾</Text>
+          <Text style={styles.title}>PetMedia'ya Hoş Geldiniz!</Text>
+          <Text style={styles.subtitle}>Evcil hayvan dostlarınız için buradayız</Text>
+        </View>
+        
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="E-posta"
+            placeholderTextColor={theme.colors.text.secondary}
+            value={email}
+            onChangeText={handleEmailChange}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Şifre"
+            placeholderTextColor={theme.colors.text.secondary}
+            value={password}
+            onChangeText={handlePasswordChange}
+            secureTextEntry
+          />
+        </View>
+
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
         )}
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.switchButton}
-        onPress={onSwitchToRegister}
-      >
-        <Text style={styles.switchText}>
-          Hesabınız yok mu? <Text style={styles.switchTextBold}>Kayıt Ol</Text>
-        </Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={handleLogin}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={theme.colors.text.inverse} />
+          ) : (
+            <Text style={styles.buttonText}>Giriş Yap</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.switchButton}
+          onPress={onSwitchToRegister}
+        >
+          <Text style={styles.switchText}>
+            Hesabınız yok mu? <Text style={styles.switchTextBold}>Kayıt Ol</Text>
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background.primary,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
-    backgroundColor: '#faf7f0',
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  emoji: {
+    fontSize: 64,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: '#a855f7',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#7c3aed',
+    textAlign: 'center',
+    opacity: 0.8,
   },
   inputContainer: {
     marginBottom: 16,
   },
   input: {
     backgroundColor: '#ffffff',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     fontSize: 16,
     color: '#1f2937',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderWidth: 2,
+    borderColor: '#e9d5ff',
+    shadowColor: '#a855f7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   button: {
     backgroundColor: '#a855f7',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginTop: 16,
+    shadowColor: '#a855f7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -182,13 +223,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 8,
-  },
-  debugText: {
-    fontSize: 14,
-    color: 'blue',
-    textAlign: 'center',
-    padding: 5,
-    backgroundColor: 'lightblue',
-    marginBottom: 10,
   },
 });
