@@ -57,13 +57,42 @@ export default function ProfileScreen() {
     }
   }, [isAuthenticated, user?.id, loadUserPets]);
 
-  // Ekran focus olduğunda pet'leri yenile
+  // Ekran focus olduğunda profil verilerini ve pet'leri yenile
   useFocusEffect(
     useCallback(() => {
       if (isAuthenticated && user?.id) {
+        // Profil verilerini Firestore'dan yeniden yükle
+        const refreshProfile = async () => {
+          try {
+            const profileData = await UserProfileService.getUserProfile(user.id);
+            if (profileData) {
+              // photoURL kontrolü
+              let photoURL = user.photoURL || '';
+              if (profileData.photoURL && typeof profileData.photoURL === 'string' && profileData.photoURL.trim() !== '') {
+                photoURL = profileData.photoURL;
+              }
+              
+              const updatedUser = {
+                ...user,
+                displayName: profileData.displayName || user.displayName,
+                photoURL: photoURL,
+                city: profileData.city || user.city,
+                bio: profileData.bio || user.bio,
+                updatedAt: profileData.updatedAt || user.updatedAt,
+              };
+              
+              setUser(updatedUser);
+              console.log('Profile refreshed on focus, photoURL:', updatedUser.photoURL);
+            }
+          } catch (error) {
+            console.error('Error refreshing profile on focus:', error);
+          }
+        };
+        
+        refreshProfile();
         loadUserPets();
       }
-    }, [isAuthenticated, user?.id, loadUserPets])
+    }, [isAuthenticated, user?.id, loadUserPets, setUser])
   );
 
   const onRefresh = async () => {
@@ -77,11 +106,17 @@ export default function ProfileScreen() {
       const profileData = await UserProfileService.getUserProfile(user.id);
       
       if (profileData) {
+        // photoURL kontrolü: Firestore'dan gelen varsa onu kullan
+        let photoURL = user.photoURL || '';
+        if (profileData.photoURL && typeof profileData.photoURL === 'string' && profileData.photoURL.trim() !== '') {
+          photoURL = profileData.photoURL;
+        }
+        
         // Güncel verilerle user state'ini güncelle
         const updatedUser = {
           ...user,
           displayName: profileData.displayName || user.displayName,
-          photoURL: (profileData.photoURL && profileData.photoURL.startsWith('http')) ? profileData.photoURL : user.photoURL,
+          photoURL: photoURL,
           city: profileData.city || user.city,
           bio: profileData.bio || user.bio,
           updatedAt: profileData.updatedAt || user.updatedAt,
@@ -89,6 +124,7 @@ export default function ProfileScreen() {
         
         setUser(updatedUser);
         console.log('Profile data refreshed:', updatedUser);
+        console.log('PhotoURL after refresh:', updatedUser.photoURL);
         
         // Pet'leri de yenile
         await loadUserPets();
@@ -181,8 +217,15 @@ export default function ProfileScreen() {
       >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          {user?.photoURL ? (
-            <Image source={{ uri: user.photoURL }} style={styles.profileAvatar} />
+          {user?.photoURL && user.photoURL.trim() !== '' ? (
+            <Image 
+              source={{ uri: user.photoURL }} 
+              style={styles.profileAvatar}
+              onError={(error) => {
+                console.error('Profile image load error:', error);
+                // Image yüklenemezse placeholder göster
+              }}
+            />
           ) : (
             <LinearGradient
               colors={[theme.colors.primary[500], theme.colors.primary[600]]}

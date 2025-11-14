@@ -26,11 +26,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           if (profileData) {
             // Use Firestore data if available
+            // photoURL kontrolü: Firestore'dan gelen varsa onu kullan, yoksa Firebase Auth'tan al
+            let photoURL = '';
+            if (profileData.photoURL && typeof profileData.photoURL === 'string' && profileData.photoURL.trim() !== '') {
+              photoURL = profileData.photoURL;
+            } else if (firebaseUser.photoURL && firebaseUser.photoURL.trim() !== '') {
+              photoURL = firebaseUser.photoURL;
+            }
+            
             const user = {
               id: firebaseUser.uid,
               email: firebaseUser.email || '',
               displayName: profileData.displayName || firebaseUser.displayName || '',
-              photoURL: (profileData.photoURL && profileData.photoURL.startsWith('http')) ? profileData.photoURL : (firebaseUser.photoURL || ''),
+              photoURL: photoURL,
               city: profileData.city || '',
               bio: profileData.bio || '',
               favorites: profileData.favorites || [],
@@ -38,6 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               updatedAt: profileData.updatedAt || new Date().toISOString(),
             };
             console.log('Profile loaded from Firestore:', user);
+            console.log('PhotoURL:', user.photoURL);
             setUser(user);
           } else {
             // Create default user if no profile exists
@@ -52,7 +61,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             };
-            console.log('No profile found, using default user:', user);
+            console.log('No profile found, creating default user in Firestore:', user);
+            
+            // Create user profile in Firestore if it doesn't exist
+            try {
+              await UserProfileService.updateUserProfile(firebaseUser.uid, {
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                city: user.city,
+                bio: user.bio,
+                favorites: user.favorites,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+              });
+              console.log('User profile created in Firestore');
+            } catch (profileError) {
+              console.error('Error creating user profile in Firestore:', profileError);
+              // Continue even if Firestore update fails
+            }
+            
             setUser(user);
           }
         } catch (error) {
