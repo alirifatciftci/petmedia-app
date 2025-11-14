@@ -25,7 +25,7 @@ import {
 import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
-import { UserProfileService, PetService } from '../../services/firebase';
+import { UserProfileService, PetService, MapSpotService } from '../../services/firebase';
 import { PetCard } from '../../components/common/PetCard';
 import { Pet } from '../../types';
 
@@ -36,6 +36,9 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [userPets, setUserPets] = useState<Pet[]>([]);
   const [loadingPets, setLoadingPets] = useState(false);
+  const [savedCount, setSavedCount] = useState(0);
+  const [contributionsCount, setContributionsCount] = useState(0);
+  const [loadingCounts, setLoadingCounts] = useState(false);
 
   const loadUserPets = useCallback(async () => {
     if (!user?.id) return;
@@ -51,11 +54,45 @@ export default function ProfileScreen() {
     }
   }, [user?.id]);
 
+  const loadProfileCounts = useCallback(async () => {
+    if (!user?.id) return;
+    
+    setLoadingCounts(true);
+    try {
+      // Get fresh user profile from Firestore to get updated favorites
+      const profileData = await UserProfileService.getUserProfile(user.id);
+      const favorites = profileData?.favorites || user.favorites || [];
+      
+      // Get saved count from user favorites
+      const savedCountValue = Array.isArray(favorites) ? favorites.length : 0;
+      setSavedCount(savedCountValue);
+      
+      // Get contributions count from map spots
+      const contributionsCountValue = await MapSpotService.getMapSpotsCount(user.id);
+      setContributionsCount(contributionsCountValue);
+      
+      console.log('ProfileScreen: Loaded counts:', {
+        saved: savedCountValue,
+        contributions: contributionsCountValue,
+        favoritesFromDB: favorites,
+      });
+    } catch (error) {
+      console.error('Error loading profile counts:', error);
+      // Fallback to user.favorites if Firestore fails
+      const savedCountValue = user.favorites?.length || 0;
+      setSavedCount(savedCountValue);
+      setContributionsCount(0);
+    } finally {
+      setLoadingCounts(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       loadUserPets();
+      loadProfileCounts();
     }
-  }, [isAuthenticated, user?.id, loadUserPets]);
+  }, [isAuthenticated, user?.id, loadUserPets, loadProfileCounts]);
 
   // Ekran focus olduğunda profil verilerini ve pet'leri yenile
   useFocusEffect(
@@ -91,8 +128,9 @@ export default function ProfileScreen() {
         
         refreshProfile();
         loadUserPets();
+        loadProfileCounts();
       }
-    }, [isAuthenticated, user?.id, loadUserPets, setUser])
+    }, [isAuthenticated, user?.id, loadUserPets, loadProfileCounts, setUser])
   );
 
   const onRefresh = async () => {
@@ -126,8 +164,9 @@ export default function ProfileScreen() {
         console.log('Profile data refreshed:', updatedUser);
         console.log('PhotoURL after refresh:', updatedUser.photoURL);
         
-        // Pet'leri de yenile
+        // Pet'leri ve sayıları da yenile
         await loadUserPets();
+        await loadProfileCounts();
         
         // Başarı popup'ı göster
         Alert.alert('✅ Güncellendi', 'Profil bilgileriniz başarıyla güncellendi!');
@@ -154,14 +193,14 @@ export default function ProfileScreen() {
       id: 'saved',
       title: t('profile.saved'),
       icon: Heart,
-      count: 8,
+      count: loadingCounts ? 0 : savedCount,
       onPress: () => console.log('Saved pets'),
     },
     {
       id: 'contributions',
       title: t('profile.contributions'),
       icon: MapPin,
-      count: 12,
+      count: loadingCounts ? 0 : contributionsCount,
       onPress: () => console.log('Map contributions'),
     },
   ];

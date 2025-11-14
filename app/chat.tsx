@@ -32,9 +32,10 @@ export default function ChatScreen() {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
-  const otherUserId = params.userId as string;
-  const otherUserName = params.userName as string || 'Kullanıcı';
-  const otherUserPhoto = params.userPhoto as string || '';
+  const otherUserId = params.otherUserId as string || params.userId as string;
+  const otherUserName = params.otherUserName as string || params.userName as string || 'Kullanıcı';
+  const otherUserPhoto = params.otherUserPhoto as string || params.userPhoto as string || '';
+  const chatIdParam = params.chatId as string;
 
   useEffect(() => {
     if (!user?.id || !otherUserId) return;
@@ -42,8 +43,18 @@ export default function ChatScreen() {
     const initializeChat = async () => {
       try {
         setLoading(true);
-        // Get or create thread
-        const newThreadId = await MessageService.getOrCreateThread(user.id, otherUserId);
+        
+        // If chatId is provided, use it directly; otherwise get or create thread
+        let newThreadId: string;
+        if (chatIdParam) {
+          console.log('ChatScreen: Using provided chatId:', chatIdParam);
+          newThreadId = chatIdParam;
+        } else {
+          console.log('ChatScreen: Getting or creating thread for users:', user.id, otherUserId);
+          newThreadId = await MessageService.getOrCreateThread(user.id, otherUserId);
+          console.log('ChatScreen: Thread ID:', newThreadId);
+        }
+        
         setThreadId(newThreadId);
 
         // Load existing messages
@@ -84,7 +95,7 @@ export default function ChatScreen() {
         if (unsubscribe) unsubscribe();
       });
     };
-  }, [user?.id, otherUserId]);
+  }, [user?.id, otherUserId, chatIdParam]);
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !threadId || !user?.id || sending) return;
