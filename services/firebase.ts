@@ -503,13 +503,34 @@ export class PetService {
 
   static async updatePet(petId: string, updates: any) {
     try {
+      console.log('PetService: Updating pet with ID:', petId);
+      console.log('PetService: Updates data:', updates);
+      
       const petRef = firestoreDoc(db, 'pets', petId);
-      await updateDoc(petRef, {
-        ...updates,
-        updatedAt: new Date().toISOString(),
+      
+      // Remove undefined values to avoid Firestore errors
+      const cleanUpdates: any = {};
+      Object.keys(updates).forEach(key => {
+        if (updates[key] !== undefined && updates[key] !== null) {
+          cleanUpdates[key] = updates[key];
+        }
       });
+      
+      cleanUpdates.updatedAt = new Date().toISOString();
+      
+      console.log('PetService: Clean updates to save:', cleanUpdates);
+      console.log('PetService: Firestore reference path:', petRef.path);
+      
+      await updateDoc(petRef, cleanUpdates);
+      
+      console.log('PetService: Pet updated successfully');
     } catch (error) {
       console.error('PetService: Error updating pet:', error);
+      console.error('PetService: Error details:', {
+        code: error instanceof Error ? (error as any).code : 'unknown',
+        message: error instanceof Error ? error.message : 'unknown',
+        stack: error instanceof Error ? error.stack : 'unknown'
+      });
       throw error;
     }
   }
@@ -530,14 +551,20 @@ export class MessageService {
   // Get or create a chat between two users
   static async getOrCreateThread(userId1: string, userId2: string): Promise<string> {
     try {
+      console.log('MessageService: getOrCreateThread called for users:', userId1, userId2);
+      
       // Create a consistent chat ID (sorted to ensure uniqueness)
       const participants = [userId1, userId2].sort();
       const chatId = `${participants[0]}_${participants[1]}`;
+      
+      console.log('MessageService: Generated chatId:', chatId);
       
       const chatRef = firestoreDoc(db, 'chats', chatId);
       const chatSnap = await getDoc(chatRef);
       
       if (!chatSnap.exists()) {
+        console.log('MessageService: Chat does not exist, creating new chat...');
+        
         // Get user info for both users
         const [user1, user2] = await Promise.all([
           UserService.getUserById(userId1),
@@ -559,11 +586,14 @@ export class MessageService {
           lastMessageAt: null,
         });
         
-        console.log('MessageService: Created new chat:', chatId);
+        console.log('MessageService: ✅ Created new chat:', chatId);
       } else {
+        console.log('MessageService: ✅ Chat already exists, returning existing chat:', chatId);
+        
         // Update user info if it's missing (for existing chats)
         const chatData = chatSnap.data();
         if (!chatData.user1Name || !chatData.user2Name) {
+          console.log('MessageService: Updating missing user info in existing chat...');
           const [user1, user2] = await Promise.all([
             UserService.getUserById(userId1),
             UserService.getUserById(userId2),
@@ -576,9 +606,11 @@ export class MessageService {
             user2Photo: (user2 as any)?.photoURL || '',
             updatedAt: new Date().toISOString(),
           });
+          console.log('MessageService: User info updated in existing chat');
         }
       }
       
+      console.log('MessageService: Returning chatId:', chatId);
       return chatId;
     } catch (error) {
       console.error('MessageService: Error getting/creating chat:', error);
@@ -832,6 +864,46 @@ export class UserService {
     } catch (error) {
       console.error('UserService: Error ensuring user in Firestore:', error);
       throw error;
+    }
+  }
+}
+
+// Map Spot Service
+export class MapSpotService {
+  static async getUserMapSpots(userId: string) {
+    try {
+      console.log('MapSpotService: Getting map spots for user:', userId);
+      const spotsCollection = firestoreCollection(db, 'mapSpots');
+      const q = query(spotsCollection, where('creatorId', '==', userId));
+      const snapshot = await getDocs(q);
+      
+      console.log(`MapSpotService: Found ${snapshot.docs.length} map spots for user`);
+      
+      const spots = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt) : new Date(),
+          lastUpdatedAt: data.lastUpdatedAt ? (typeof data.lastUpdatedAt === 'string' ? new Date(data.lastUpdatedAt) : data.lastUpdatedAt) : new Date(),
+        };
+      });
+      
+      return spots;
+    } catch (error) {
+      console.error('MapSpotService: Error getting user map spots:', error);
+      // If collection doesn't exist or error occurs, return empty array
+      return [];
+    }
+  }
+
+  static async getMapSpotsCount(userId: string): Promise<number> {
+    try {
+      const spots = await this.getUserMapSpots(userId);
+      return spots.length;
+    } catch (error) {
+      console.error('MapSpotService: Error getting map spots count:', error);
+      return 0;
     }
   }
 }

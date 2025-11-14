@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,13 +28,17 @@ import { BeautifulModal } from '../../components/common/BeautifulModal';
 import { PetDetailModal } from '../../components/common/PetDetailModal';
 import { PawIcon } from '../../components/common/PawIcon';
 import { usePetStore } from '../../stores/petStore';
+import { useAuthStore } from '../../stores/authStore';
 import { Pet } from '../../types';
-import { PetService } from '../../services/firebase';
+import { PetService, MessageService, UserService } from '../../services/firebase';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
+  const { user } = useAuthStore();
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'cat' | 'dog' | 'other'>('all');
   const [modalVisible, setModalVisible] = useState(false);
   const [modalContent, setModalContent] = useState({
@@ -48,6 +53,61 @@ export default function HomeScreen() {
   const [loadingPets, setLoadingPets] = useState(true);
   
   const { favorites, toggleFavorite } = usePetStore();
+
+  const handleContactPress = async (pet: Pet) => {
+    if (!user?.id) {
+      // User not logged in, show login prompt
+      console.log('HomeScreen: User must be logged in to contact');
+      return;
+    }
+
+    if (pet.ownerId === user.id) {
+      // User is the owner, shouldn't happen but handle it
+      console.log('HomeScreen: User is the owner, cannot contact themselves');
+      return;
+    }
+
+    try {
+      console.log('HomeScreen: Contacting pet owner:', {
+        currentUserId: user.id,
+        petOwnerId: pet.ownerId,
+        petId: pet.id,
+      });
+
+      // Get owner info
+      const ownerInfo = await UserService.getUserById(pet.ownerId);
+      const ownerName = (ownerInfo as any)?.displayName || (ownerInfo as any)?.email || 'İlan Sahibi';
+      const ownerPhoto = (ownerInfo as any)?.photoURL || '';
+      
+      console.log('HomeScreen: Owner info retrieved:', { ownerName, ownerPhoto });
+      
+      // Get or create chat thread (returns existing chat if exists, creates new if not)
+      console.log('HomeScreen: Getting or creating chat thread...');
+      const chatId = await MessageService.getOrCreateThread(user.id, pet.ownerId);
+      console.log('HomeScreen: Chat thread ID:', chatId);
+      
+      // Navigate to chat screen with chatId and user info
+      console.log('HomeScreen: Navigating to chat screen with params:', {
+        chatId,
+        otherUserId: pet.ownerId,
+        otherUserName: ownerName,
+        otherUserPhoto: ownerPhoto,
+      });
+      
+      router.push({
+        pathname: '/chat',
+        params: {
+          chatId: chatId,
+          otherUserId: pet.ownerId,
+          otherUserName: ownerName,
+          otherUserPhoto: ownerPhoto,
+        },
+      });
+    } catch (error) {
+      console.error('HomeScreen: Error in handleContactPress:', error);
+      Alert.alert('Hata', 'İletişim kurulurken bir hata oluştu. Lütfen tekrar deneyin.');
+    }
+  };
 
   const loadPets = useCallback(async () => {
     setLoadingPets(true);
@@ -285,6 +345,16 @@ export default function HomeScreen() {
           if (selectedPet) {
             toggleFavorite(selectedPet.id);
           }
+        }}
+        currentUserId={user?.id || null}
+        onContactPress={() => {
+          if (selectedPet) {
+            handleContactPress(selectedPet);
+          }
+        }}
+        onPetUpdate={() => {
+          // Reload pets after update
+          loadPets();
         }}
       />
     </SafeAreaView>

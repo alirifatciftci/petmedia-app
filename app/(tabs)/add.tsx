@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,21 +13,26 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'expo-router';
-import { X, Camera, Image as ImageIcon, ArrowLeft } from 'lucide-react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { X, Camera, Image as ImageIcon, ArrowLeft, ArrowRight, Circle, Minus, Square, Maximize2, Check } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 import { PetService, FirebaseStorage } from '../../services/firebase';
-import { PetSpecies, PetSize, PetSex } from '../../types';
+import { PetSpecies, PetSize, PetSex, Pet } from '../../types';
 
 export default function AddScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const params = useLocalSearchParams<{ petId?: string }>();
   const { user, isAuthenticated } = useAuthStore();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
+  const [loadingPet, setLoadingPet] = useState(false);
+  const [petId, setPetId] = useState<string | null>(params.petId || null);
+  const isEditMode = !!petId;
   
   // Form state
   const [step, setStep] = useState(1);
@@ -44,6 +49,48 @@ export default function AddScreen() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
+  // Load pet data if in edit mode
+  useEffect(() => {
+    if (isEditMode && petId && user?.id) {
+      loadPetData();
+    }
+  }, [isEditMode, petId, user?.id]);
+
+  const loadPetData = async () => {
+    if (!petId) return;
+    
+    setLoadingPet(true);
+    try {
+      const pet = await PetService.getPet(petId) as Pet;
+      
+      // Check if user owns this pet
+      if (pet.ownerId !== user?.id) {
+        Alert.alert('Hata', 'Bu ilanı düzenleme yetkiniz yok');
+        router.back();
+        return;
+      }
+      
+      // Populate form with pet data
+      setSpecies(pet.species);
+      setName(pet.name);
+      setSex(pet.sex);
+      setAgeMonths(pet.ageMonths.toString());
+      setSize(pet.size);
+      setBreed(pet.breed || '');
+      setCity(pet.city);
+      setVaccinated(pet.vaccinated);
+      setNeutered(pet.neutered);
+      setDescription(pet.description);
+      setPhotos(pet.photos || []);
+    } catch (error) {
+      console.error('Error loading pet:', error);
+      Alert.alert('Hata', 'İlan yüklenirken bir hata oluştu');
+      router.back();
+    } finally {
+      setLoadingPet(false);
+    }
+  };
+
   if (!isAuthenticated || !user) {
     return (
       <SafeAreaView style={styles.container}>
@@ -51,8 +98,20 @@ export default function AddScreen() {
         <View style={styles.content}>
           <Text style={styles.title}>Giriş Yapın</Text>
           <Text style={styles.subtitle}>
-            Yeni ilan eklemek için giriş yapmanız gerekiyor
+            {isEditMode ? 'İlanı düzenlemek için' : 'Yeni ilan eklemek için'} giriş yapmanız gerekiyor
           </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadingPet) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
+        <View style={styles.content}>
+          <ActivityIndicator size="large" color={theme.colors.primary[500]} />
+          <Text style={styles.subtitle}>İlan yükleniyor...</Text>
         </View>
       </SafeAreaView>
     );
@@ -117,17 +176,24 @@ export default function AddScreen() {
     try {
       setLoading(true);
 
-      // Upload photos to Firebase Storage
+      // Upload new photos to Firebase Storage (only local URIs)
       const uploadedPhotos: string[] = [];
       for (let i = 0; i < photos.length; i++) {
-        try {
-          const imagePath = `pets/${user.id}/${Date.now()}_${i}.jpg`;
-          const downloadURL = await FirebaseStorage.uploadImage(imagePath, photos[i]);
-          uploadedPhotos.push(downloadURL);
-        } catch (error) {
-          console.error('Photo upload error:', error);
-          // Continue with local URI if upload fails
-          uploadedPhotos.push(photos[i]);
+        const photo = photos[i];
+        // If it's already a URL (from existing pet), keep it
+        if (photo.startsWith('http://') || photo.startsWith('https://')) {
+          uploadedPhotos.push(photo);
+        } else {
+          // It's a local file, upload it
+          try {
+            const imagePath = `pets/${user.id}/${Date.now()}_${i}.jpg`;
+            const downloadURL = await FirebaseStorage.uploadImage(imagePath, photo);
+            uploadedPhotos.push(downloadURL);
+          } catch (error) {
+            console.error('Photo upload error:', error);
+            // Continue with local URI if upload fails
+            uploadedPhotos.push(photo);
+          }
         }
       }
 
@@ -150,31 +216,44 @@ export default function AddScreen() {
         status: 'available' as const,
       };
 
-      await PetService.addPet(petData);
-
-      Alert.alert('Başarılı', 'Hayvan ilanı başarıyla eklendi!', [
-        {
-          text: 'Tamam',
-          onPress: () => {
-            // Reset form
-            setStep(1);
-            setSpecies('');
-            setName('');
-            setSex('');
-            setAgeMonths('');
-            setSize('');
-            setBreed('');
-            setCity('');
-            setVaccinated(false);
-            setNeutered(false);
-            setDescription('');
-            setPhotos([]);
+      if (isEditMode && petId) {
+        // Update existing pet
+        await PetService.updatePet(petId, petData);
+        Alert.alert('Başarılı', 'İlan başarıyla güncellendi!', [
+          {
+            text: 'Tamam',
+            onPress: () => {
+              router.back();
+            },
           },
-        },
-      ]);
+        ]);
+      } else {
+        // Create new pet
+        await PetService.addPet(petData);
+        Alert.alert('Başarılı', 'Hayvan ilanı başarıyla eklendi!', [
+          {
+            text: 'Tamam',
+            onPress: () => {
+              // Reset form
+              setStep(1);
+              setSpecies('');
+              setName('');
+              setSex('');
+              setAgeMonths('');
+              setSize('');
+              setBreed('');
+              setCity('');
+              setVaccinated(false);
+              setNeutered(false);
+              setDescription('');
+              setPhotos([]);
+            },
+          },
+        ]);
+      }
     } catch (error) {
-      console.error('Error adding pet:', error);
-      Alert.alert('Hata', 'İlan eklenirken bir hata oluştu');
+      console.error('Error saving pet:', error);
+      Alert.alert('Hata', isEditMode ? 'İlan güncellenirken bir hata oluştu' : 'İlan eklenirken bir hata oluştu');
     } finally {
       setLoading(false);
     }
@@ -292,18 +371,26 @@ export default function AddScreen() {
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Cinsiyet *</Text>
-        <View style={styles.optionsRow}>
+        <View style={styles.compactOptionsRow}>
           <TouchableOpacity
-            style={[styles.optionButton, sex === 'male' && styles.optionButtonActive]}
+            style={[styles.compactOptionButton, sex === 'male' && styles.compactOptionButtonActive]}
             onPress={() => setSex('male')}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.optionText, sex === 'male' && styles.optionTextActive]}>Erkek</Text>
+            <Circle size={16} color={sex === 'male' ? theme.colors.primary[500] : theme.colors.text.secondary} fill={sex === 'male' ? theme.colors.primary[500] : 'transparent'} />
+            <Text style={[styles.compactOptionText, sex === 'male' && styles.compactOptionTextActive]}>
+              Erkek
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.optionButton, sex === 'female' && styles.optionButtonActive]}
+            style={[styles.compactOptionButton, sex === 'female' && styles.compactOptionButtonActive]}
             onPress={() => setSex('female')}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.optionText, sex === 'female' && styles.optionTextActive]}>Dişi</Text>
+            <Circle size={16} color={sex === 'female' ? theme.colors.primary[500] : theme.colors.text.secondary} fill={sex === 'female' ? theme.colors.primary[500] : 'transparent'} />
+            <Text style={[styles.compactOptionText, sex === 'female' && styles.compactOptionTextActive]}>
+              Dişi
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -321,18 +408,23 @@ export default function AddScreen() {
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Büyüklük *</Text>
-        <View style={styles.optionsRow}>
-          {(['small', 'medium', 'large'] as PetSize[]).map((s) => (
-            <TouchableOpacity
-              key={s}
-              style={[styles.optionButton, size === s && styles.optionButtonActive]}
-              onPress={() => setSize(s)}
-            >
-              <Text style={[styles.optionText, size === s && styles.optionTextActive]}>
-                {s === 'small' ? 'Küçük' : s === 'medium' ? 'Orta' : 'Büyük'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.compactOptionsRow}>
+          {(['small', 'medium', 'large'] as PetSize[]).map((s) => {
+            const IconComponent = s === 'small' ? Minus : s === 'medium' ? Square : Maximize2;
+            return (
+              <TouchableOpacity
+                key={s}
+                style={[styles.compactOptionButton, size === s && styles.compactOptionButtonActive]}
+                onPress={() => setSize(s)}
+                activeOpacity={0.7}
+              >
+                <IconComponent size={18} color={size === s ? theme.colors.primary[500] : theme.colors.text.secondary} />
+                <Text style={[styles.compactOptionText, size === s && styles.compactOptionTextActive]}>
+                  {s === 'small' ? 'Küçük' : s === 'medium' ? 'Orta' : 'Büyük'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
@@ -423,12 +515,13 @@ export default function AddScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
       
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -444,7 +537,7 @@ export default function AddScreen() {
             >
               <ArrowLeft size={24} color={theme.colors.text.primary} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Yeni İlan Ekle</Text>
+            <Text style={styles.headerTitle}>{isEditMode ? 'İlanı Düzenle' : 'Yeni İlan Ekle'}</Text>
             <View style={styles.headerSpacer} />
           </View>
           <View style={styles.progressBar}>
@@ -453,39 +546,63 @@ export default function AddScreen() {
           <Text style={styles.stepIndicator}>Adım {step}/3</Text>
         </View>
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
         </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.button, styles.buttonSecondary, step === 1 && styles.buttonHidden]}
-            onPress={() => {
-              if (step > 1) {
-                setStep(step - 1);
-              } else {
-                router.back();
-              }
-            }}
-            disabled={loading}
-          >
-            <Text style={styles.buttonSecondaryText}>Geri</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.buttonPrimary, step === 1 && styles.buttonFull]}
-            onPress={handleNext}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.buttonPrimaryText}>
-                {step === 3 ? 'İlanı Yayınla' : 'İleri'}
-              </Text>
+        <View style={[styles.footerContainer, { paddingBottom: Math.max(insets.bottom, theme.spacing.md) }]}>
+          <View style={styles.footer}>
+            {step > 1 && (
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary]}
+                onPress={() => {
+                  if (step > 1) {
+                    setStep(step - 1);
+                  } else {
+                    router.back();
+                  }
+                }}
+                disabled={loading}
+                activeOpacity={0.7}
+              >
+                <ArrowLeft size={20} color={theme.colors.text.primary} />
+                <Text style={styles.buttonSecondaryText}>Geri</Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.button, 
+                styles.buttonPrimary, 
+                step === 1 && styles.buttonFull,
+                loading && styles.buttonDisabled
+              ]}
+              onPress={handleNext}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.buttonPrimaryText}>
+                    {step === 3 ? (isEditMode ? 'Güncelle' : 'İlanı Yayınla') : 'İleri'}
+                  </Text>
+                  {step === 3 ? (
+                    <Check size={20} color="white" style={styles.buttonIcon} />
+                  ) : (
+                    <ArrowRight size={20} color="white" style={styles.buttonIcon} />
+                  )}
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -583,6 +700,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing.sm,
   },
+  compactOptionsRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    flexWrap: 'wrap',
+  },
   optionButton: {
     width: '48%',
     height: 180,
@@ -602,6 +724,30 @@ const styles = StyleSheet.create({
   optionButtonActive: {
     borderColor: theme.colors.primary[500],
     borderWidth: 3,
+  },
+  compactOptionButton: {
+    flex: 1,
+    minWidth: '30%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    backgroundColor: theme.colors.background.secondary,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border.light,
+  },
+  compactOptionButtonActive: {
+    borderColor: theme.colors.primary[500],
+    backgroundColor: theme.colors.primary[50],
+    borderWidth: 2,
+    shadowColor: theme.colors.primary[500],
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   optionImage: {
     width: '100%',
@@ -673,24 +819,35 @@ const styles = StyleSheet.create({
   optionTextActive: {
     color: 'white',
   },
+  compactOptionText: {
+    fontSize: theme.typography.fontSize.base,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    color: theme.colors.text.primary,
+  },
+  compactOptionTextActive: {
+    color: theme.colors.primary[700],
+    fontFamily: theme.typography.fontFamily.bodyBold,
+  },
   inputGroup: {
     marginBottom: theme.spacing.lg,
   },
   label: {
-    fontSize: theme.typography.fontSize.base,
+    fontSize: theme.typography.fontSize.sm,
     fontFamily: theme.typography.fontFamily.bodySemiBold,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   input: {
     backgroundColor: theme.colors.background.secondary,
     borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
     fontSize: theme.typography.fontSize.base,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.primary,
     borderWidth: 1,
     borderColor: theme.colors.border.light,
+    minHeight: 48,
   },
   textArea: {
     minHeight: 100,
@@ -769,20 +926,33 @@ const styles = StyleSheet.create({
     color: theme.colors.primary[500],
     marginTop: theme.spacing.xs,
   },
-  footer: {
-    flexDirection: 'row',
-    padding: theme.spacing.lg,
-    gap: theme.spacing.md,
-    backgroundColor: theme.colors.background.secondary,
+  footerContainer: {
+    backgroundColor: theme.colors.background.primary,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border.light,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  footer: {
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    gap: theme.spacing.md,
   },
   button: {
     flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: theme.spacing.xs,
+    paddingVertical: theme.spacing.md + 2,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.xl,
+    minHeight: 52,
   },
   buttonFull: {
     flex: 1,
@@ -793,21 +963,33 @@ const styles = StyleSheet.create({
   },
   buttonPrimary: {
     backgroundColor: theme.colors.primary[500],
+    shadowColor: theme.colors.primary[500],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonSecondary: {
     backgroundColor: theme.colors.background.secondary,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.colors.border.medium,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonPrimaryText: {
     fontSize: theme.typography.fontSize.base,
-    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.inverse,
+    letterSpacing: 0.3,
   },
   buttonSecondaryText: {
     fontSize: theme.typography.fontSize.base,
     fontFamily: theme.typography.fontFamily.bodySemiBold,
     color: theme.colors.text.primary,
+  },
+  buttonIcon: {
+    marginLeft: theme.spacing.xs,
   },
   title: {
     fontSize: theme.typography.fontSize['3xl'],

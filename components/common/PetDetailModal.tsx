@@ -12,10 +12,12 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, MapPin, Calendar, Heart, Shield, User, Play, Camera, Video } from 'lucide-react-native';
+import { X, MapPin, Calendar, Heart, Shield, User, Play, Camera, Video, Edit, MessageCircle } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { theme } from '../../theme';
 import { Pet } from '../../types';
 import { MediaGalleryModal } from './MediaGalleryModal';
+import { EditPetModal } from '../pet/EditPetModal';
 
 interface PetDetailModalProps {
   visible: boolean;
@@ -23,6 +25,9 @@ interface PetDetailModalProps {
   pet: Pet | null;
   onFavoritePress?: () => void;
   isFavorite?: boolean;
+  currentUserId?: string | null;
+  onContactPress?: () => void;
+  onPetUpdate?: () => void;
 }
 
 export const PetDetailModal: React.FC<PetDetailModalProps> = ({
@@ -30,11 +35,18 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
   onClose,
   pet,
   onFavoritePress,
-  isFavorite = false
+  isFavorite = false,
+  currentUserId = null,
+  onContactPress,
+  onPetUpdate
 }) => {
+  const router = useRouter();
   const [mediaGalleryVisible, setMediaGalleryVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   
   if (!pet) return null;
+
+  const isOwner = currentUserId && pet.ownerId === currentUserId;
 
   const allMedia = [
     ...pet.photos.map(photo => ({ type: 'photo' as const, url: photo })),
@@ -198,14 +210,40 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
 
               {/* Action Buttons */}
               <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.contactButton}>
-                  <LinearGradient
-                    colors={[theme.colors.primary[500], theme.colors.primary[600]]}
-                    style={styles.contactGradient}
+                {isOwner ? (
+                  <TouchableOpacity 
+                    style={styles.editButton}
+                    onPress={() => {
+                      setEditModalVisible(true);
+                    }}
                   >
-                    <Text style={styles.contactText}>İletişime Geç</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
+                    <LinearGradient
+                      colors={[theme.colors.primary[500], theme.colors.primary[600]]}
+                      style={styles.editGradient}
+                    >
+                      <Edit size={20} color="white" style={styles.buttonIcon} />
+                      <Text style={styles.editText}>İlanı Düzenle</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity 
+                    style={styles.contactButton}
+                    onPress={() => {
+                      if (onContactPress) {
+                        onContactPress();
+                      }
+                      onClose();
+                    }}
+                  >
+                    <LinearGradient
+                      colors={[theme.colors.primary[500], theme.colors.primary[600]]}
+                      style={styles.contactGradient}
+                    >
+                      <MessageCircle size={20} color="white" style={styles.buttonIcon} />
+                      <Text style={styles.contactText}>İletişime Geç</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -217,6 +255,17 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
         visible={mediaGalleryVisible}
         onClose={() => setMediaGalleryVisible(false)}
         pet={pet}
+      />
+
+      {/* Edit Pet Modal */}
+      <EditPetModal
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        pet={pet}
+        onUpdate={() => {
+          if (onPetUpdate) onPetUpdate();
+          setEditModalVisible(false);
+        }}
       />
     </Modal>
   );
@@ -414,11 +463,33 @@ const styles = StyleSheet.create({
   contactGradient: {
     paddingVertical: 16,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
   contactText: {
     fontSize: 16,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: 'white',
+  },
+  editButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  editGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  editText: {
+    fontSize: 16,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    color: 'white',
+  },
+  buttonIcon: {
+    marginRight: 0,
   },
   // Media Gallery Button
   mediaGalleryButton: {
