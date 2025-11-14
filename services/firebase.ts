@@ -190,11 +190,40 @@ export class FirebaseStorage {
       
       console.log('FirebaseStorage: User authenticated:', auth.currentUser.uid);
       
-      // For React Native, you might need to convert the imageUri to a blob first
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
+      // For React Native/Expo, use FileSystem to read the file
+      let blob: Blob;
       
-      console.log('FirebaseStorage: Blob created, size:', blob.size);
+      try {
+        // Try using fetch first (works for http/https URLs)
+        if (imageUri.startsWith('http://') || imageUri.startsWith('https://')) {
+          const response = await fetch(imageUri);
+          blob = await response.blob();
+        } else {
+          // For local file URIs, use FileSystem
+          // Import FileSystem dynamically to avoid issues if not available
+          const FileSystemModule = await import('expo-file-system');
+          const FileSystem = FileSystemModule.default || FileSystemModule;
+          const EncodingType = (FileSystemModule as any).EncodingType || { Base64: 'base64' };
+          const base64 = await FileSystem.readAsStringAsync(imageUri, {
+            encoding: EncodingType.Base64 || 'base64',
+          });
+          
+          // Convert base64 to blob
+          const byteCharacters = atob(base64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          blob = new Blob([byteArray], { type: 'image/jpeg' });
+        }
+        
+        console.log('FirebaseStorage: Blob created, size:', blob.size);
+      } catch (fetchError) {
+        console.error('FirebaseStorage: Error creating blob:', fetchError);
+        // Fallback: try direct upload with URI (if supported)
+        throw new Error(`Failed to process image: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`);
+      }
       
       const imageRef = storageRef(storage, path);
       console.log('FirebaseStorage: Reference created:', imageRef.fullPath);
@@ -362,29 +391,57 @@ export class PetService {
 
   static async getUserPets(userId: string) {
     try {
+      console.log('PetService: Getting pets for user:', userId);
       const petsCollection = firestoreCollection(db, 'pets');
+      
       // Index gerektirmemek için sadece where kullan, orderBy'ı client-side'da yap
+      // ÖNEMLİ: orderBy kullanmıyoruz çünkü composite index gerektirir
       const q = query(petsCollection, where('ownerId', '==', userId));
       const snapshot = await getDocs(q);
+      
+      console.log(`PetService: Found ${snapshot.docs.length} pets for user`);
       
       const pets = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
           ...data,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+          createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt) : new Date(),
+          updatedAt: data.updatedAt ? (typeof data.updatedAt === 'string' ? new Date(data.updatedAt) : data.updatedAt) : new Date(),
         };
       });
       
       // Client-side'da tarihe göre sırala (en yeni önce)
-      return pets.sort((a, b) => {
+      // Bu index gerektirmez çünkü Firestore query'si değil, JavaScript sort
+      const sortedPets = pets.sort((a, b) => {
         const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
         const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
         return dateB.getTime() - dateA.getTime();
       });
-    } catch (error) {
+      
+      console.log(`PetService: Returning ${sortedPets.length} sorted pets`);
+      return sortedPets;
+    } catch (error: any) {
       console.error('PetService: Error getting user pets:', error);
+      
+      // Index hatası ise, kullanıcıya bilgi ver
+      if (error?.code === 'failed-precondition' || error?.message?.includes('index')) {
+        console.warn('PetService: Index required. Falling back to getAllPets and filtering client-side.');
+        // Fallback: Tüm pet'leri al ve client-side'da filtrele (daha yavaş ama çalışır)
+        try {
+          const allPets = await this.getAllPets();
+          const userPets = allPets.filter((pet: any) => pet.ownerId === userId);
+          return userPets.sort((a: any, b: any) => {
+            const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+            const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+            return dateB.getTime() - dateA.getTime();
+          });
+        } catch (fallbackError) {
+          console.error('PetService: Fallback also failed:', fallbackError);
+          throw error; // Orijinal hatayı fırlat
+        }
+      }
+      
       throw error;
     }
   }
@@ -463,6 +520,317 @@ export class PetService {
       await deleteDoc(petRef);
     } catch (error) {
       console.error('PetService: Error deleting pet:', error);
+      throw error;
+    }
+  }
+}
+
+// Message Service
+export class MessageService {
+  // Get or create a chat between two users
+  static async getOrCreateThread(userId1: string, userId2: string): Promise<string> {
+    try {
+      // Create a consistent chat ID (sorted to ensure uniqueness)
+      const participants = [userId1, userId2].sort();
+      const chatId = `${participants[0]}_${participants[1]}`;
+      
+      const chatRef = firestoreDoc(db, 'chats', chatId);
+      const chatSnap = await getDoc(chatRef);
+      
+      if (!chatSnap.exists()) {
+        // Get user info for both users
+        const [user1, user2] = await Promise.all([
+          UserService.getUserById(userId1),
+          UserService.getUserById(userId2),
+        ]);
+        
+        // Create new chat with user information
+        await setDoc(chatRef, {
+          participants: participants,
+          user1Id: userId1,
+          user1Name: (user1 as any)?.displayName || (user1 as any)?.email || 'Kullanıcı',
+          user1Photo: (user1 as any)?.photoURL || '',
+          user2Id: userId2,
+          user2Name: (user2 as any)?.displayName || (user2 as any)?.email || 'Kullanıcı',
+          user2Photo: (user2 as any)?.photoURL || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastMessage: null,
+          lastMessageAt: null,
+        });
+        
+        console.log('MessageService: Created new chat:', chatId);
+      } else {
+        // Update user info if it's missing (for existing chats)
+        const chatData = chatSnap.data();
+        if (!chatData.user1Name || !chatData.user2Name) {
+          const [user1, user2] = await Promise.all([
+            UserService.getUserById(userId1),
+            UserService.getUserById(userId2),
+          ]);
+          
+          await updateDoc(chatRef, {
+            user1Name: (user1 as any)?.displayName || (user1 as any)?.email || 'Kullanıcı',
+            user1Photo: (user1 as any)?.photoURL || '',
+            user2Name: (user2 as any)?.displayName || (user2 as any)?.email || 'Kullanıcı',
+            user2Photo: (user2 as any)?.photoURL || '',
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      }
+      
+      return chatId;
+    } catch (error) {
+      console.error('MessageService: Error getting/creating chat:', error);
+      throw error;
+    }
+  }
+
+  // Send a message
+  static async sendMessage(threadId: string, senderId: string, text: string): Promise<string> {
+    try {
+      const messagesCollection = firestoreCollection(db, 'messages');
+      const messageData = {
+        threadId,
+        senderId,
+        text,
+        readBy: [senderId], // Sender has read their own message
+        createdAt: new Date().toISOString(),
+      };
+      
+      const docRef = await addDoc(messagesCollection, messageData);
+      
+      // Update chat with last message
+      const chatRef = firestoreDoc(db, 'chats', threadId);
+      await updateDoc(chatRef, {
+        lastMessage: text,
+        lastMessageAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      
+      return docRef.id;
+    } catch (error) {
+      console.error('MessageService: Error sending message:', error);
+      throw error;
+    }
+  }
+
+  // Get messages for a thread
+  static async getThreadMessages(threadId: string) {
+    try {
+      const messagesCollection = firestoreCollection(db, 'messages');
+      const q = query(
+        messagesCollection,
+        where('threadId', '==', threadId),
+        orderBy('createdAt', 'asc')
+      );
+      const snapshot = await getDocs(q);
+      
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+        };
+      });
+    } catch (error) {
+      console.error('MessageService: Error getting messages:', error);
+      throw error;
+    }
+  }
+
+  // Get all chats for a user
+  static async getUserConversations(userId: string) {
+    try {
+      console.log('MessageService: Getting chats for user:', userId);
+      const chatsCollection = firestoreCollection(db, 'chats');
+      const q = query(
+        chatsCollection,
+        where('participants', 'array-contains', userId)
+      );
+      const snapshot = await getDocs(q);
+      
+      console.log(`MessageService: Found ${snapshot.docs.length} chats`);
+      
+      const chats = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          participants: data.participants || [],
+          user1Id: data.user1Id || '',
+          user1Name: data.user1Name || '',
+          user1Photo: data.user1Photo || '',
+          user2Id: data.user2Id || '',
+          user2Name: data.user2Name || '',
+          user2Photo: data.user2Photo || '',
+          lastMessage: data.lastMessage || null,
+          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+          lastMessageAt: data.lastMessageAt ? new Date(data.lastMessageAt) : null,
+        };
+      });
+      
+      // Sort by lastMessageAt (most recent first)
+      const sortedChats = chats.sort((a, b) => {
+        const dateA = a.lastMessageAt || a.createdAt;
+        const dateB = b.lastMessageAt || b.createdAt;
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      console.log(`MessageService: Returning ${sortedChats.length} sorted chats`);
+      return sortedChats;
+    } catch (error) {
+      console.error('MessageService: Error getting chats:', error);
+      throw error;
+    }
+  }
+
+  // Mark messages as read
+  static async markAsRead(threadId: string, userId: string) {
+    try {
+      const messagesCollection = firestoreCollection(db, 'messages');
+      // Get all messages in the thread
+      const q = query(
+        messagesCollection,
+        where('threadId', '==', threadId)
+      );
+      const snapshot = await getDocs(q);
+      
+      // Update messages that are NOT read by this user
+      const updatePromises = snapshot.docs
+        .filter(doc => {
+          const data = doc.data();
+          const readBy = data.readBy || [];
+          return !readBy.includes(userId);
+        })
+        .map(doc => {
+          const data = doc.data();
+          const readBy = data.readBy || [];
+          return updateDoc(doc.ref, {
+            readBy: [...readBy, userId],
+          });
+        });
+      
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error('MessageService: Error marking as read:', error);
+      throw error;
+    }
+  }
+
+  // Subscribe to messages in real-time
+  static subscribeToThreadMessages(
+    threadId: string,
+    callback: (messages: any[]) => void
+  ) {
+    const messagesCollection = firestoreCollection(db, 'messages');
+    const q = query(
+      messagesCollection,
+      where('threadId', '==', threadId),
+      orderBy('createdAt', 'asc')
+    );
+    
+    return onSnapshot(q, (snapshot) => {
+      const messages = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+        };
+      });
+      callback(messages);
+    });
+  }
+}
+
+// User Service - Get all authenticated users
+export class UserService {
+  static async getAllUsers(excludeUserId?: string) {
+    try {
+      console.log('UserService: Fetching all users from Firestore...');
+      const usersCollection = firestoreCollection(db, 'users');
+      const snapshot = await getDocs(usersCollection);
+      
+      console.log(`UserService: Found ${snapshot.docs.length} users in Firestore`);
+      
+      let users: any[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          email: data.email || '',
+          displayName: data.displayName || data.email?.split('@')[0] || 'Kullanıcı',
+          photoURL: data.photoURL || '',
+          city: data.city || '',
+          bio: data.bio || '',
+          favorites: data.favorites || [],
+          createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt) : new Date(),
+          updatedAt: data.updatedAt ? (typeof data.updatedAt === 'string' ? new Date(data.updatedAt) : data.updatedAt) : new Date(),
+        };
+      });
+      
+      // Exclude current user if provided
+      if (excludeUserId) {
+        users = users.filter(user => user.id !== excludeUserId);
+        console.log(`UserService: Excluded current user, ${users.length} users remaining`);
+      }
+      
+      // Sort by displayName or email
+      const sortedUsers = users.sort((a, b) => {
+        const nameA = (a.displayName || a.email || '').toLowerCase();
+        const nameB = (b.displayName || b.email || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+      
+      console.log(`UserService: Returning ${sortedUsers.length} users`);
+      return sortedUsers;
+    } catch (error) {
+      console.error('UserService: Error getting all users:', error);
+      throw error;
+    }
+  }
+
+  static async getUserById(userId: string) {
+    try {
+      const userRef = firestoreDoc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        return {
+          id: userSnap.id,
+          ...data,
+          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('UserService: Error getting user:', error);
+      throw error;
+    }
+  }
+
+  // Ensure current user exists in Firestore
+  static async ensureUserInFirestore(userId: string, userData: any) {
+    try {
+      const userRef = firestoreDoc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        console.log('UserService: User not found in Firestore, creating...');
+        await setDoc(userRef, {
+          ...userData,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        console.log('UserService: User created in Firestore');
+      } else {
+        console.log('UserService: User already exists in Firestore');
+      }
+    } catch (error) {
+      console.error('UserService: Error ensuring user in Firestore:', error);
       throw error;
     }
   }

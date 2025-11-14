@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { FirebaseAuth } from '../services/firebase';
+import { FirebaseAuth, UserProfileService } from '../services/firebase';
 import type { User } from '../types';
 
 interface AuthState {
@@ -101,6 +101,22 @@ export const useAuthStore = create<AuthState>()(
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
+        
+        // Create user profile in Firestore
+        try {
+          await UserProfileService.updateUserProfile(result.user.uid, {
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            favorites: user.favorites,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+          });
+          console.log('User profile created in Firestore');
+        } catch (profileError) {
+          console.error('Error creating user profile in Firestore:', profileError);
+          // Continue even if Firestore update fails
+        }
         
         set({
           user,
