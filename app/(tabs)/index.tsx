@@ -30,7 +30,7 @@ import { PawIcon } from '../../components/common/PawIcon';
 import { usePetStore } from '../../stores/petStore';
 import { useAuthStore } from '../../stores/authStore';
 import { Pet } from '../../types';
-import { PetService, MessageService, UserService } from '../../services/firebase';
+import { PetService, MessageService, UserService, UserProfileService } from '../../services/firebase';
 import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
@@ -38,7 +38,7 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'cat' | 'dog' | 'other'>('all');
   const [modalVisible, setModalVisible] = useState(false);
   const [modalContent, setModalContent] = useState({
@@ -53,6 +53,38 @@ export default function HomeScreen() {
   const [loadingPets, setLoadingPets] = useState(true);
   
   const { favorites, toggleFavorite } = usePetStore();
+
+  const handleToggleFavorite = async (petId: string) => {
+    if (!user?.id) return;
+
+    // Update local state
+    toggleFavorite(petId);
+    
+    // Get updated favorites
+    const isCurrentlyFavorite = favorites.includes(petId);
+    const updatedFavorites = isCurrentlyFavorite
+      ? favorites.filter(id => id !== petId)
+      : [...favorites, petId];
+
+    // Update Firestore
+    try {
+      await UserProfileService.updateUserProfile(user.id, {
+        favorites: updatedFavorites,
+      });
+
+      // Update user state
+      if (user) {
+        setUser({
+          ...user,
+          favorites: updatedFavorites,
+        });
+      }
+
+      console.log('HomeScreen: Favorites updated in Firestore:', updatedFavorites);
+    } catch (error) {
+      console.error('HomeScreen: Error updating favorites in Firestore:', error);
+    }
+  };
 
   const handleContactPress = async (pet: Pet) => {
     if (!user?.id) {
@@ -151,7 +183,7 @@ export default function HomeScreen() {
         setSelectedPet(item);
         setPetDetailVisible(true);
       }}
-      onFavoritePress={() => toggleFavorite(item.id)}
+      onFavoritePress={() => handleToggleFavorite(item.id)}
     />
   );
 
@@ -343,7 +375,7 @@ export default function HomeScreen() {
         isFavorite={selectedPet ? favorites.includes(selectedPet.id) : false}
         onFavoritePress={() => {
           if (selectedPet) {
-            toggleFavorite(selectedPet.id);
+            handleToggleFavorite(selectedPet.id);
           }
         }}
         currentUserId={user?.id || null}
