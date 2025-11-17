@@ -42,15 +42,15 @@ import {
   deleteObject
 } from 'firebase/storage';
 
-// Firebase configuration
+// Firebase configuration (petmedia-app-v2)
 export const firebaseConfig = {
-  apiKey: "AIzaSyDgOVFJHZJqYCN8mbVsSsH-xVcbXeLyqVo",
-  authDomain: "petmedia-app.firebaseapp.com",
-  projectId: "petmedia-app",
-  storageBucket: "petmedia-app.firebasestorage.app",
-  messagingSenderId: "955384772369",
-  appId: "1:955384772369:web:4186aa8cdb66977b28beb0",
-  measurementId: "G-WM8W1717LZ"
+  apiKey: "AIzaSyB9zqqbVuCaPO3tL1uMhXcCPi-F7rJmcr0",
+  authDomain: "petmedia-app-v2.firebaseapp.com",
+  projectId: "petmedia-app-v2",
+  storageBucket: "petmedia-app-v2.firebasestorage.app",
+  messagingSenderId: "17357521540",
+  appId: "1:17357521540:web:c7168bf86db8697c5df8d1",
+  measurementId: "G-9W68V4VT5D"
 };
 
 // Initialize Firebase
