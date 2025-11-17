@@ -25,6 +25,7 @@ import {
 import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
+import { FavoritesModal } from '../../components/profile/FavoritesModal';
 import { UserProfileService, PetService, MapSpotService } from '../../services/firebase';
 import { PetCard } from '../../components/common/PetCard';
 import { Pet } from '../../types';
@@ -39,6 +40,7 @@ export default function ProfileScreen() {
   const [savedCount, setSavedCount] = useState(0);
   const [contributionsCount, setContributionsCount] = useState(0);
   const [loadingCounts, setLoadingCounts] = useState(false);
+  const [showFavoritesModal, setShowFavoritesModal] = useState(false);
 
   const loadUserPets = useCallback(async () => {
     if (!user?.id) return;
@@ -191,10 +193,10 @@ export default function ProfileScreen() {
     },
     {
       id: 'saved',
-      title: t('profile.saved'),
+      title: 'Beğenilerim',
       icon: Heart,
       count: loadingCounts ? 0 : savedCount,
-      onPress: () => console.log('Saved pets'),
+      onPress: () => setShowFavoritesModal(true),
     },
     {
       id: 'contributions',
@@ -373,6 +375,15 @@ export default function ProfileScreen() {
       <EditProfileModal 
         visible={showEditModal}
         onClose={() => setShowEditModal(false)}
+      />
+
+      <FavoritesModal
+        visible={showFavoritesModal}
+        onClose={() => {
+          setShowFavoritesModal(false);
+          // Reload counts when modal closes
+          loadProfileCounts();
+        }}
       />
     </SafeAreaView>
   );
