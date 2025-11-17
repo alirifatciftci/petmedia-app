@@ -375,12 +375,26 @@ export class PetService {
       
       if (petSnap.exists()) {
         const data = petSnap.data();
-        return {
+        const pet = {
           id: petSnap.id,
           ...data,
+          // Ensure photos is always an array
+          photos: Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []),
+          videos: Array.isArray(data.videos) ? data.videos : (data.videos ? [data.videos] : []),
+          tags: Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []),
           createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
           updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
         };
+        
+        console.log('PetService: getPet data:', {
+          id: pet.id,
+          name: (pet as any).name,
+          photosCount: pet.photos?.length || 0,
+          photos: pet.photos,
+          rawPhotos: data.photos,
+        });
+        
+        return pet;
       }
       return null;
     } catch (error) {
@@ -403,12 +417,29 @@ export class PetService {
       
       const pets = snapshot.docs.map(doc => {
         const data = doc.data();
-        return {
+        const pet = {
           id: doc.id,
           ...data,
+          // Ensure photos is always an array
+          photos: Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []),
+          videos: Array.isArray(data.videos) ? data.videos : (data.videos ? [data.videos] : []),
+          tags: Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []),
           createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt) : new Date(),
           updatedAt: data.updatedAt ? (typeof data.updatedAt === 'string' ? new Date(data.updatedAt) : data.updatedAt) : new Date(),
         };
+        
+        // Debug: Log photos for first pet
+        if (snapshot.docs.indexOf(doc) === 0) {
+          console.log('PetService: Sample user pet data:', {
+            id: pet.id,
+            name: (pet as any).name,
+            photosCount: pet.photos?.length || 0,
+            photos: pet.photos,
+            rawPhotos: data.photos,
+          });
+        }
+        
+        return pet;
       });
       
       // Client-side'da tarihe göre sırala (en yeni önce)
@@ -459,12 +490,29 @@ export class PetService {
       
       return snapshot.docs.map(doc => {
         const data = doc.data();
-        return {
+        const pet = {
           id: doc.id,
           ...data,
+          // Ensure photos is always an array
+          photos: Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []),
+          videos: Array.isArray(data.videos) ? data.videos : (data.videos ? [data.videos] : []),
+          tags: Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []),
           createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
           updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
         };
+        
+        // Debug: Log photos for first pet
+        if (snapshot.docs.indexOf(doc) === 0) {
+          console.log('PetService: Sample pet data:', {
+            id: pet.id,
+            name: (pet as any).name,
+            photosCount: pet.photos?.length || 0,
+            photos: pet.photos,
+            rawPhotos: data.photos,
+          });
+        }
+        
+        return pet;
       });
     } catch (error) {
       console.error('PetService: Error getting all pets:', error);
@@ -481,12 +529,29 @@ export class PetService {
       
       const pets = snapshot.docs.map(doc => {
         const data = doc.data();
-        return {
+        const pet = {
           id: doc.id,
           ...data,
+          // Ensure photos is always an array
+          photos: Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []),
+          videos: Array.isArray(data.videos) ? data.videos : (data.videos ? [data.videos] : []),
+          tags: Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []),
           createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
           updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
         };
+        
+        // Debug: Log photos for first pet
+        if (snapshot.docs.indexOf(doc) === 0) {
+          console.log('PetService: Sample species pet data:', {
+            id: pet.id,
+            name: (pet as any).name,
+            photosCount: pet.photos?.length || 0,
+            photos: pet.photos,
+            rawPhotos: data.photos,
+          });
+        }
+        
+        return pet;
       });
       
       // Client-side'da tarihe göre sırala (en yeni önce)
