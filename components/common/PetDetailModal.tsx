@@ -87,7 +87,11 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
             {/* Header with Image */}
             <View style={styles.imageContainer}>
               <Image
-                source={{ uri: pet.photos[0] }}
+                source={{ 
+                  uri: (pet.photos && Array.isArray(pet.photos) && pet.photos.length > 0 && pet.photos[0]) 
+                    ? pet.photos[0] 
+                    : 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg' 
+                }}
                 style={styles.petImage}
                 resizeMode="cover"
               />

@@ -34,9 +34,13 @@ export const MediaGalleryModal: React.FC<MediaGalleryModalProps> = ({
 
   if (!pet) return null;
 
+  // Ensure photos and videos are arrays
+  const photos = Array.isArray(pet.photos) ? pet.photos : [];
+  const videos = Array.isArray(pet.videos) ? pet.videos : [];
+
   const allMedia = [
-    ...pet.photos.map(photo => ({ type: 'photo' as const, url: photo })),
-    ...pet.videos.map(video => ({ type: 'video' as const, url: video }))
+    ...photos.map(photo => ({ type: 'photo' as const, url: photo })),
+    ...videos.map(video => ({ type: 'video' as const, url: video }))
   ];
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
@@ -145,11 +149,11 @@ export const MediaGalleryModal: React.FC<MediaGalleryModalProps> = ({
         <View style={styles.mediaTypeIndicator}>
           <View style={styles.typeContainer}>
             <Camera size={16} color="white" />
-            <Text style={styles.typeText}>{pet.photos.length} Fotoğraf</Text>
+            <Text style={styles.typeText}>{photos.length} Fotoğraf</Text>
           </View>
           <View style={styles.typeContainer}>
             <Play size={16} color="white" />
-            <Text style={styles.typeText}>{pet.videos.length} Video</Text>
+            <Text style={styles.typeText}>{videos.length} Video</Text>
           </View>
         </View>
 
