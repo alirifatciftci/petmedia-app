@@ -264,7 +264,6 @@ export default function ProfileScreen() {
               style={styles.profileAvatar}
               onError={(error) => {
                 console.error('Profile image load error:', error);
-                // Image yüklenemezse placeholder göster
               }}
             />
           ) : (
@@ -272,22 +271,31 @@ export default function ProfileScreen() {
               colors={[theme.colors.primary[500], theme.colors.primary[600]]}
               style={styles.avatar}
             >
-              <User size={32} color="white" />
+              <User size={40} color="white" />
             </LinearGradient>
           )}
           
           <Text style={styles.displayName}>
             {user?.displayName || user?.email?.split('@')[0] || 'Pet Lover'}
           </Text>
-          <Text style={styles.email}>{user?.email}</Text>
+          
+          {user?.email && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoEmoji}>📧</Text>
+              <Text style={styles.email}>{user.email}</Text>
+            </View>
+          )}
+          
           {user?.city && (
-            <View style={styles.locationContainer}>
-              <MapPin size={16} color={theme.colors.text.secondary} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoEmoji}>📍</Text>
               <Text style={styles.location}>{user.city}</Text>
             </View>
           )}
+          
           {user?.bio && (
             <View style={styles.bioContainer}>
+              <Text style={styles.bioLabel}>💬 Hakkımda</Text>
               <Text style={styles.bio}>{user.bio}</Text>
             </View>
           )}
@@ -298,8 +306,9 @@ export default function ProfileScreen() {
               console.log('Edit profile button pressed');
               setShowEditModal(true);
             }}
+            activeOpacity={0.8}
           >
-            <Text style={styles.editProfileText}>Profil Bilgilerini Düzenle</Text>
+            <Text style={styles.editProfileText}>✏️ Profil Bilgilerini Düzenle</Text>
           </TouchableOpacity>
         </View>
 
@@ -324,51 +333,64 @@ export default function ProfileScreen() {
 
         {/* Profile Options */}
         <View style={styles.optionsContainer}>
-          {profileOptions.map((option) => (
+          <View style={styles.optionsCard}>
+            {profileOptions.map((option, index) => (
+              <TouchableOpacity
+                key={option.id}
+                style={[
+                  styles.optionItem,
+                  index === profileOptions.length - 1 && styles.optionItemLast
+                ]}
+                onPress={option.onPress}
+                activeOpacity={0.7}
+              >
+                <View style={styles.optionLeft}>
+                  <View style={styles.optionIcon}>
+                    <option.icon size={22} color={theme.colors.primary[500]} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.optionTitle}>{option.title}</Text>
+                </View>
+                <View style={styles.optionRight}>
+                  <View style={styles.countBadge}>
+                    <Text style={styles.optionCount}>{option.count}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Settings & Logout */}
+          <View style={styles.settingsCard}>
             <TouchableOpacity
-              key={option.id}
-              style={styles.optionItem}
-              onPress={option.onPress}
+              style={styles.settingsItem}
+              onPress={() => console.log('Settings')}
+              activeOpacity={0.7}
             >
               <View style={styles.optionLeft}>
-                <View style={styles.optionIcon}>
-                  <option.icon size={24} color={theme.colors.primary[500]} />
+                <View style={[styles.optionIcon, styles.settingsIcon]}>
+                  <Settings size={22} color={theme.colors.text.secondary} strokeWidth={2} />
                 </View>
-                <Text style={styles.optionTitle}>{option.title}</Text>
-              </View>
-              <View style={styles.optionRight}>
-                <Text style={styles.optionCount}>{option.count}</Text>
+                <Text style={styles.optionTitle}>{t('profile.settings')}</Text>
               </View>
             </TouchableOpacity>
-          ))}
 
-          {/* Settings */}
-          <TouchableOpacity
-            style={styles.optionItem}
-            onPress={() => console.log('Settings')}
-          >
-            <View style={styles.optionLeft}>
-              <View style={styles.optionIcon}>
-                <Settings size={24} color={theme.colors.text.secondary} />
-              </View>
-              <Text style={styles.optionTitle}>{t('profile.settings')}</Text>
-            </View>
-          </TouchableOpacity>
+            <View style={styles.divider} />
 
-          {/* Logout */}
-          <TouchableOpacity
-            style={[styles.optionItem, styles.logoutItem]}
-            onPress={logout}
-          >
-            <View style={styles.optionLeft}>
-              <View style={styles.optionIcon}>
-                <LogOut size={24} color={theme.colors.error[500]} />
+            <TouchableOpacity
+              style={styles.settingsItem}
+              onPress={logout}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionLeft}>
+                <View style={[styles.optionIcon, styles.logoutIcon]}>
+                  <LogOut size={22} color={theme.colors.error[500]} strokeWidth={2} />
+                </View>
+                <Text style={[styles.optionTitle, styles.logoutText]}>
+                  {t('common.logout')}
+                </Text>
               </View>
-              <Text style={[styles.optionTitle, styles.logoutText]}>
-                {t('common.logout')}
-              </Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
       
@@ -449,130 +471,186 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: theme.spacing.xl,
     backgroundColor: theme.colors.background.secondary,
-    marginBottom: theme.spacing.lg,
+    marginBottom: 0,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   displayName: {
-    fontSize: theme.typography.fontSize.xl,
+    fontSize: theme.typography.fontSize['2xl'],
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.xs,
+  },
+  infoEmoji: {
+    fontSize: 18,
   },
   email: {
     fontSize: theme.typography.fontSize.base,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.sm,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
   },
   location: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: theme.typography.fontSize.base,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.secondary,
   },
   optionsContainer: {
     paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
     paddingBottom: 100, // Account for tab bar
+  },
+  optionsCard: {
+    backgroundColor: 'white',
+    borderRadius: theme.borderRadius.xl,
+    marginBottom: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+    overflow: 'hidden',
   },
   optionItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    marginBottom: theme.spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.light,
+  },
+  optionItemLast: {
+    borderBottomWidth: 0,
   },
   optionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   optionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background.tertiary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.primary[50],
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: theme.spacing.md,
+  },
+  settingsIcon: {
+    backgroundColor: theme.colors.background.tertiary,
+  },
+  logoutIcon: {
+    backgroundColor: theme.colors.error[50],
   },
   optionTitle: {
     fontSize: theme.typography.fontSize.base,
     fontFamily: theme.typography.fontFamily.bodySemiBold,
     color: theme.colors.text.primary,
+    flex: 1,
   },
-  optionRight: {},
+  optionRight: {
+    marginLeft: theme.spacing.sm,
+  },
+  countBadge: {
+    backgroundColor: theme.colors.primary[50],
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.full,
+    minWidth: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   optionCount: {
     fontSize: theme.typography.fontSize.sm,
-    fontFamily: theme.typography.fontFamily.bodySemiBold,
-    color: theme.colors.primary[500],
-    backgroundColor: theme.colors.primary[50],
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs / 2,
-    borderRadius: theme.borderRadius.full,
-    minWidth: 24,
-    textAlign: 'center',
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    color: theme.colors.primary[600],
   },
-  logoutItem: {
-    marginTop: theme.spacing.lg,
-    borderColor: theme.colors.error[500],
-    borderWidth: 1,
+  settingsCard: {
+    backgroundColor: 'white',
+    borderRadius: theme.borderRadius.xl,
+    marginBottom: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  settingsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border.light,
+    marginHorizontal: theme.spacing.lg,
   },
   logoutText: {
     color: theme.colors.error[500],
   },
   editProfileButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.background.secondary,
+    paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing.md,
-    borderRadius: 25,
-    marginTop: theme.spacing.md,
+    borderRadius: theme.borderRadius.full,
+    marginTop: theme.spacing.lg,
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: theme.colors.primary[200],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 3,
   },
   editProfileText: {
-    color: theme.colors.primary[600],
+    color: theme.colors.text.primary,
     fontSize: theme.typography.fontSize.base,
-    fontFamily: theme.typography.fontFamily.bodyBold,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
     textAlign: 'center',
   },
   profileAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: 'white',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    marginBottom: theme.spacing.lg,
   },
   bioContainer: {
-    marginTop: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: theme.borderRadius.lg,
+    maxWidth: '90%',
+  },
+  bioLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xs,
+    textAlign: 'center',
   },
   bio: {
     fontSize: theme.typography.fontSize.sm,
     fontFamily: theme.typography.fontFamily.body,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: theme.colors.text.secondary,
     textAlign: 'center',
     lineHeight: 20,
   },
