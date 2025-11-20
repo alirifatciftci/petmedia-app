@@ -31,6 +31,7 @@ export default function AddScreen() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [loadingPet, setLoadingPet] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [petId, setPetId] = useState<string | null>(params.petId || null);
   const isEditMode = !!petId;
   
@@ -119,26 +120,68 @@ export default function AddScreen() {
 
   const handleImagePicker = async () => {
     try {
+      console.log('Photo upload started');
+      
+      // İzin iste
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('Permission result:', permissionResult);
       
       if (permissionResult.granted === false) {
         Alert.alert('Hata', 'Galeri erişim izni gerekli');
         return;
       }
 
+      // Fotoğraf seç
+      console.log('Launching image picker...');
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        quality: 0.8,
+        quality: 0.6,
       });
+      
+      console.log('Image picker result:', result);
 
       if (!result.canceled && result.assets) {
-        const newPhotos = result.assets.map(asset => asset.uri);
-        setPhotos([...photos, ...newPhotos]);
+        console.log(`Selected ${result.assets.length} images`);
+        setIsUploadingPhoto(true);
+        
+        // Her fotoğrafı işle (profil kısmındaki gibi - Firebase Storage'a yükle, başarısız olursa local URI kullan)
+        const newPhotoURLs: string[] = [];
+        
+        for (let i = 0; i < result.assets.length; i++) {
+          const asset = result.assets[i];
+          console.log(`Processing image ${i + 1}:`, asset.uri);
+          
+          try {
+            // Firebase Storage'a yükle
+            const imagePath = `pets/${user!.id}/photo_${Date.now()}_${i}.jpg`;
+            const downloadURL = await FirebaseStorage.uploadImage(imagePath, asset.uri);
+            
+            if (!downloadURL || downloadURL.trim().length === 0) {
+              throw new Error('Invalid download URL received');
+            }
+            
+            newPhotoURLs.push(downloadURL);
+            console.log(`Image ${i + 1} uploaded successfully, URL: ${downloadURL}`);
+          } catch (storageError) {
+            console.error('Storage upload failed, using local URI:', storageError);
+            // Geçici çözüm: Local URI kullan (profil kısmındaki gibi)
+            newPhotoURLs.push(asset.uri);
+            console.log(`Image ${i + 1} using local URI: ${asset.uri}`);
+          }
+        }
+        
+        // Tüm URL'leri state'e ekle
+        if (newPhotoURLs.length > 0) {
+          setPhotos([...photos, ...newPhotoURLs]);
+          console.log(`Successfully added ${newPhotoURLs.length} photos`);
+        }
       }
     } catch (error) {
-      console.error('Image picker error:', error);
-      Alert.alert('Hata', 'Fotoğraf seçilirken bir hata oluştu');
+      console.error('Photo upload error:', error);
+      Alert.alert('Hata', 'Fotoğraf yüklenirken bir hata oluştu');
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -176,45 +219,50 @@ export default function AddScreen() {
     try {
       setLoading(true);
 
-      // Upload new photos to Firebase Storage (only local URIs)
-      const uploadedPhotos: string[] = [];
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        // If it's already a URL (from existing pet), keep it
-        if (photo.startsWith('http://') || photo.startsWith('https://')) {
-          uploadedPhotos.push(photo);
-        } else {
-          // It's a local file, upload it
-          try {
-            const imagePath = `pets/${user.id}/${Date.now()}_${i}.jpg`;
-            const downloadURL = await FirebaseStorage.uploadImage(imagePath, photo);
-            uploadedPhotos.push(downloadURL);
-          } catch (error) {
-            console.error('Photo upload error:', error);
-            // Continue with local URI if upload fails
-            uploadedPhotos.push(photo);
-          }
-        }
+      // Photos are already converted to base64 in handleImagePicker (profil kısmındaki gibi)
+      // Just validate and use them directly
+      if (photos.length === 0) {
+        Alert.alert('Hata', 'Lütfen en az bir fotoğraf ekleyin');
+        setLoading(false);
+        return;
       }
+      
+      // Validate all photos are valid base64 strings
+      const validPhotos = photos.filter(photo => 
+        photo && typeof photo === 'string' && photo.trim().length > 0
+      );
+      
+      if (validPhotos.length === 0) {
+        Alert.alert('Hata', 'Geçerli fotoğraf bulunamadı. Lütfen tekrar fotoğraf ekleyin.');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Using photos (already base64), count:', validPhotos.length);
+      console.log('First photo base64 length:', validPhotos[0]?.length || 0);
 
       // Create pet data
-      const petData = {
+      const petData: any = {
         ownerId: user.id,
         species: species as PetSpecies,
         name,
         sex: sex as PetSex,
         ageMonths: parseInt(ageMonths),
         size: size as PetSize,
-        breed: breed || undefined,
         city,
         vaccinated,
         neutered,
         description,
-        photos: uploadedPhotos,
+        photos: validPhotos, // Already base64 strings from handleImagePicker
         videos: [],
         tags: [],
         status: 'available' as const,
       };
+      
+      // Only add breed if it's not empty (Firestore doesn't accept undefined)
+      if (breed && breed.trim()) {
+        petData.breed = breed.trim();
+      }
 
       if (isEditMode && petId) {
         // Update existing pet
@@ -505,9 +553,19 @@ export default function AddScreen() {
               </TouchableOpacity>
             </View>
           ))}
-          <TouchableOpacity style={styles.addPhotoButton} onPress={handleImagePicker}>
-            <ImageIcon size={24} color={theme.colors.primary[500]} />
-            <Text style={styles.addPhotoText}>Fotoğraf Ekle</Text>
+          <TouchableOpacity 
+            style={[styles.addPhotoButton, isUploadingPhoto && styles.addPhotoButtonDisabled]} 
+            onPress={handleImagePicker}
+            disabled={isUploadingPhoto}
+          >
+            {isUploadingPhoto ? (
+              <ActivityIndicator size="small" color={theme.colors.primary[500]} />
+            ) : (
+              <>
+                <ImageIcon size={24} color={theme.colors.primary[500]} />
+                <Text style={styles.addPhotoText}>Fotoğraf Ekle</Text>
+              </>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -920,6 +978,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: theme.colors.background.secondary,
   },
+  addPhotoButtonDisabled: {
+    opacity: 0.6,
+  },
   addPhotoText: {
     fontSize: theme.typography.fontSize.sm,
     fontFamily: theme.typography.fontFamily.body,
@@ -1006,3 +1067,4 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 });
+

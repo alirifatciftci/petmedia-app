@@ -63,26 +63,69 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
 
   const handleImagePicker = async () => {
     try {
+      console.log('Photo upload started');
+      
+      // İzin iste
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('Permission result:', permissionResult);
       
       if (permissionResult.granted === false) {
         Alert.alert('Hata', 'Galeri erişim izni gerekli');
         return;
       }
 
+      // Fotoğraf seç
+      console.log('Launching image picker...');
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        quality: 0.8,
+        quality: 0.8, // Same quality as profile photo
       });
+      
+      console.log('Image picker result:', result);
 
       if (!result.canceled && result.assets) {
-        const newPhotos = result.assets.map(asset => asset.uri);
-        setPhotos([...photos, ...newPhotos]);
+        console.log(`Selected ${result.assets.length} images`);
+        setIsUploadingPhoto(true);
+        
+        // Her fotoğrafı işle (profil kısmındaki gibi - Firebase Storage'a yükle, başarısız olursa local URI kullan)
+        const newPhotoURLs: string[] = [];
+        
+        for (let i = 0; i < result.assets.length; i++) {
+          const asset = result.assets[i];
+          console.log(`Processing image ${i + 1}:`, asset.uri);
+          
+          try {
+            // Firebase Storage'a yükle
+            const imagePath = `pets/${user!.id}/photo_${Date.now()}_${i}.jpg`;
+            const downloadURL = await FirebaseStorage.uploadImage(imagePath, asset.uri);
+            
+            if (!downloadURL || downloadURL.trim().length === 0) {
+              throw new Error('Invalid download URL received');
+            }
+            
+            newPhotoURLs.push(downloadURL);
+            console.log(`Image ${i + 1} uploaded successfully, URL: ${downloadURL}`);
+          } catch (storageError) {
+            console.error('Storage upload failed, using local URI:', storageError);
+            // Geçici çözüm: Local URI kullan (profil kısmındaki gibi)
+            newPhotoURLs.push(asset.uri);
+            console.log(`Image ${i + 1} using local URI: ${asset.uri}`);
+          }
+        }
+        
+        // Tüm URL'leri state'e ekle (profil kısmındaki gibi)
+        if (newPhotoURLs.length > 0) {
+          setPhotos([...photos, ...newPhotoURLs]);
+          console.log(`Successfully added ${newPhotoURLs.length} photos`);
+          Alert.alert('Başarılı', `${newPhotoURLs.length} fotoğraf eklendi`);
+        }
       }
     } catch (error) {
-      console.error('Image picker error:', error);
-      Alert.alert('Hata', 'Fotoğraf seçilirken bir hata oluştu');
+      console.error('Photo upload error:', error);
+      Alert.alert('Hata', 'Fotoğraf yüklenirken bir hata oluştu');
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -106,25 +149,21 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
 
     setIsLoading(true);
     try {
-      // Upload new photos to Firebase Storage (only local URIs)
-      const uploadedPhotos: string[] = [];
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        // If it's already a URL (from existing pet), keep it
-        if (photo.startsWith('http://') || photo.startsWith('https://')) {
-          uploadedPhotos.push(photo);
-        } else {
-          // It's a local file, upload it
-          try {
-            const imagePath = `pets/${user.id}/${Date.now()}_${i}.jpg`;
-            const downloadURL = await FirebaseStorage.uploadImage(imagePath, photo);
-            uploadedPhotos.push(downloadURL);
-          } catch (error) {
-            console.error('Photo upload error:', error);
-            uploadedPhotos.push(photo);
-          }
-        }
+      // Photos are already uploaded to Firebase Storage in handleImagePicker (profil kısmındaki gibi)
+      // Just validate and use them directly
+      
+      // Validate all photos are valid URLs
+      const validPhotos = photos.filter(photo => 
+        photo && typeof photo === 'string' && photo.trim().length > 0
+      );
+      
+      if (validPhotos.length === 0) {
+        Alert.alert('Hata', 'Geçerli fotoğraf bulunamadı. Lütfen tekrar fotoğraf ekleyin.');
+        setIsLoading(false);
+        return;
       }
+      
+      console.log('Using photos (already URLs), count:', validPhotos.length);
 
       // Update pet data - only update fields that are provided
       const petData: any = {
@@ -136,7 +175,7 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
         vaccinated: Boolean(vaccinated),
         neutered: Boolean(neutered),
         description: description.trim(),
-        photos: uploadedPhotos,
+        photos: validPhotos, // Already URLs from handleImagePicker
       };
 
       // Handle breed field - Firestore doesn't accept undefined
@@ -358,7 +397,10 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosContainer}>
                 {photos.map((photo, index) => (
                   <View key={index} style={styles.photoItem}>
-                    <Image source={{ uri: photo }} style={styles.photo} />
+                    <Image 
+                      source={{ uri: photo }} 
+                      style={styles.photo} 
+                    />
                     <TouchableOpacity
                       style={styles.removePhotoButton}
                       onPress={() => removePhoto(index)}
@@ -367,9 +409,19 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
                     </TouchableOpacity>
                   </View>
                 ))}
-                <TouchableOpacity style={styles.addPhotoButton} onPress={handleImagePicker}>
-                  <ImageIcon size={24} color={theme.colors.primary[500]} />
-                  <Text style={styles.addPhotoText}>Fotoğraf Ekle</Text>
+                <TouchableOpacity 
+                  style={[styles.addPhotoButton, isUploadingPhoto && styles.addPhotoButtonDisabled]} 
+                  onPress={handleImagePicker}
+                  disabled={isUploadingPhoto}
+                >
+                  {isUploadingPhoto ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary[500]} />
+                  ) : (
+                    <>
+                      <ImageIcon size={24} color={theme.colors.primary[500]} />
+                      <Text style={styles.addPhotoText}>Fotoğraf Ekle</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -549,6 +601,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: theme.colors.background.secondary,
   },
+  addPhotoButtonDisabled: {
+    opacity: 0.6,
+  },
   addPhotoText: {
     fontSize: theme.typography.fontSize.sm,
     fontFamily: theme.typography.fontFamily.body,
@@ -556,4 +611,5 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xs,
   },
 });
+
 

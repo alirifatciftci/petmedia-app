@@ -44,6 +44,11 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
   const [mediaGalleryVisible, setMediaGalleryVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   
+  // Get first photo URL
+  const imageURL = pet?.photos && Array.isArray(pet.photos) && pet.photos.length > 0 
+    ? pet.photos[0] 
+    : null;
+  
   if (!pet) return null;
 
   const isOwner = currentUserId && pet.ownerId === currentUserId;
@@ -88,9 +93,7 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
             <View style={styles.imageContainer}>
               <Image
                 source={{ 
-                  uri: (pet.photos && Array.isArray(pet.photos) && pet.photos.length > 0 && pet.photos[0]) 
-                    ? pet.photos[0] 
-                    : 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg' 
+                  uri: imageURL || 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg'
                 }}
                 style={styles.petImage}
                 resizeMode="cover"

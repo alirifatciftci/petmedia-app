@@ -41,6 +41,8 @@ export default function ProfileScreen() {
   const [contributionsCount, setContributionsCount] = useState(0);
   const [loadingCounts, setLoadingCounts] = useState(false);
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
+  
+  const photoURL = user?.photoURL || '';
 
   const loadUserPets = useCallback(async () => {
     if (!user?.id) return;
@@ -258,9 +260,9 @@ export default function ProfileScreen() {
       >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          {user?.photoURL && user.photoURL.trim() !== '' ? (
+          {photoURL && photoURL.trim() !== '' ? (
             <Image 
-              source={{ uri: user.photoURL }} 
+              source={{ uri: photoURL }} 
               style={styles.profileAvatar}
               onError={(error) => {
                 console.error('Profile image load error:', error);

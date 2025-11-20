@@ -34,13 +34,7 @@ import {
   QuerySnapshot,
   DocumentData
 } from 'firebase/firestore';
-import { 
-  getStorage, 
-  ref as storageRef, 
-  uploadBytes, 
-  getDownloadURL,
-  deleteObject
-} from 'firebase/storage';
+import * as FileSystem from 'expo-file-system';
 
 // Firebase configuration (petmedia-app-v2)
 // For production, move these to environment variables
@@ -58,7 +52,6 @@ export const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth: Auth = getAuth(app);
 export const db: Firestore = getFirestore(app);
-export const storage = getStorage(app);
 
 // Firebase Auth Service
 export class FirebaseAuth {
@@ -171,17 +164,16 @@ export class FirebaseFirestore {
   }
 }
 
-// Firebase Storage Service
+// Image Service - Local URI Storage
+// Images are stored as local file URIs in Firestore (no Firebase Storage needed)
 export class FirebaseStorage {
+  /**
+   * Return image URI directly (no Firebase Storage upload)
+   * Images are stored as local file URIs in Firestore
+   */
   static async uploadImage(path: string, imageUri: string): Promise<string> {
     try {
-      console.log('FirebaseStorage: Starting upload for path:', path);
-      console.log('FirebaseStorage: Image URI:', imageUri);
-      
-      // Check if storage is initialized
-      if (!storage) {
-        throw new Error('Firebase Storage is not initialized');
-      }
+      console.log('ImageService: Using local image URI:', imageUri);
       
       // Check if user is authenticated
       const auth = getAuth();
@@ -189,70 +181,26 @@ export class FirebaseStorage {
         throw new Error('User must be authenticated to upload images');
       }
       
-      console.log('FirebaseStorage: User authenticated:', auth.currentUser.uid);
+      console.log('ImageService: User authenticated:', auth.currentUser.uid);
       
-      // For React Native/Expo, use FileSystem to read the file
-      let blob: Blob;
-      
-      try {
-        // Try using fetch first (works for http/https URLs)
-        if (imageUri.startsWith('http://') || imageUri.startsWith('https://')) {
-          const response = await fetch(imageUri);
-          blob = await response.blob();
-        } else {
-          // For local file URIs, use FileSystem
-          // Import FileSystem dynamically to avoid issues if not available
-          const FileSystemModule = await import('expo-file-system');
-          const FileSystem = FileSystemModule.default || FileSystemModule;
-          const EncodingType = (FileSystemModule as any).EncodingType || { Base64: 'base64' };
-          const base64 = await FileSystem.readAsStringAsync(imageUri, {
-            encoding: EncodingType.Base64 || 'base64',
-          });
-          
-          // Convert base64 to blob
-          const byteCharacters = atob(base64);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          blob = new Blob([byteArray], { type: 'image/jpeg' });
-        }
-        
-        console.log('FirebaseStorage: Blob created, size:', blob.size);
-      } catch (fetchError) {
-        console.error('FirebaseStorage: Error creating blob:', fetchError);
-        // Fallback: try direct upload with URI (if supported)
-        throw new Error(`Failed to process image: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`);
-      }
-      
-      const imageRef = storageRef(storage, path);
-      console.log('FirebaseStorage: Reference created:', imageRef.fullPath);
-      
-      await uploadBytes(imageRef, blob);
-      console.log('FirebaseStorage: Upload completed');
-      
-      const downloadURL = await getDownloadURL(imageRef);
-      console.log('FirebaseStorage: Download URL:', downloadURL);
-      
-      return downloadURL;
+      // Return the local URI directly (same as users table)
+      // This works because React Native Image component can handle file:// URIs
+      return imageUri;
     } catch (error) {
-      console.error('Firebase Storage - Upload error:', error);
-      console.error('Firebase Storage - Error details:', {
-        code: error instanceof Error ? (error as any).code : 'unknown',
-        message: error instanceof Error ? error.message : 'unknown',
-        stack: error instanceof Error ? error.stack : 'unknown'
-      });
+      console.error('ImageService - Upload error:', error);
       throw error;
     }
   }
 
-  static async deleteImage(url: string): Promise<void> {
+  /**
+   * Delete image (no-op for local URIs)
+   */
+  static async deleteImage(imagePath: string): Promise<void> {
     try {
-      const imageRef = storageRef(storage, url);
-      await deleteObject(imageRef);
+      // Local URIs are managed by the device, no deletion needed
+      console.log('ImageService: Local URI deletion not needed');
     } catch (error) {
-      console.error('Firebase Storage - Delete error:', error);
+      console.error('ImageService - Delete error:', error);
       throw error;
     }
   }
@@ -353,15 +301,33 @@ export class PetService {
     try {
       console.log('PetService: Adding pet:', petData);
       
+      // Validate photos array - must be non-empty and all URLs must be valid
+      if (!petData.photos || !Array.isArray(petData.photos) || petData.photos.length === 0) {
+        throw new Error('Pet must have at least one photo');
+      }
+      
+      // Ensure all photos are valid URLs
+      const validPhotos = petData.photos.filter((photo: string) => 
+        photo && typeof photo === 'string' && photo.trim().length > 0
+      );
+      
+      if (validPhotos.length === 0) {
+        throw new Error('No valid photo URLs found. All photos must be provided.');
+      }
+      
       const petsCollection = firestoreCollection(db, 'pets');
       const dataToSave = {
         ...petData,
+        photos: validPhotos, // Store URLs in Firestore
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       
+      console.log('PetService: Saving pet with photos:', validPhotos.length, 'URLs');
+      
       const docRef = await addDoc(petsCollection, dataToSave);
       console.log('PetService: Pet added with ID:', docRef.id);
+      console.log('PetService: Photos saved (URLs):', validPhotos.length);
       return docRef.id;
     } catch (error) {
       console.error('PetService: Error adding pet:', error);
@@ -376,11 +342,14 @@ export class PetService {
       
       if (petSnap.exists()) {
         const data = petSnap.data();
+        
+        // Ensure photos is always an array
+        let photos = Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []);
+        
         const pet = {
           id: petSnap.id,
           ...data,
-          // Ensure photos is always an array
-          photos: Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []),
+          photos: photos, // Store URLs
           videos: Array.isArray(data.videos) ? data.videos : (data.videos ? [data.videos] : []),
           tags: Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []),
           createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
@@ -392,7 +361,6 @@ export class PetService {
           name: (pet as any).name,
           photosCount: pet.photos?.length || 0,
           photos: pet.photos,
-          rawPhotos: data.photos,
         });
         
         return pet;
@@ -418,11 +386,14 @@ export class PetService {
       
       const pets = snapshot.docs.map(doc => {
         const data = doc.data();
+        
+        // Ensure photos is always an array
+        let photos = Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []);
+        
         const pet = {
           id: doc.id,
           ...data,
-          // Ensure photos is always an array
-          photos: Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []),
+          photos: photos, // Store URLs
           videos: Array.isArray(data.videos) ? data.videos : (data.videos ? [data.videos] : []),
           tags: Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []),
           createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt) : new Date(),
@@ -436,7 +407,6 @@ export class PetService {
             name: (pet as any).name,
             photosCount: pet.photos?.length || 0,
             photos: pet.photos,
-            rawPhotos: data.photos,
           });
         }
         
@@ -491,11 +461,14 @@ export class PetService {
       
       return snapshot.docs.map(doc => {
         const data = doc.data();
+        
+        // Ensure photos is always an array
+        let photos = Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []);
+        
         const pet = {
           id: doc.id,
           ...data,
-          // Ensure photos is always an array
-          photos: Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []),
+          photos: photos, // Store URLs
           videos: Array.isArray(data.videos) ? data.videos : (data.videos ? [data.videos] : []),
           tags: Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []),
           createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
@@ -509,7 +482,6 @@ export class PetService {
             name: (pet as any).name,
             photosCount: pet.photos?.length || 0,
             photos: pet.photos,
-            rawPhotos: data.photos,
           });
         }
         
@@ -530,11 +502,14 @@ export class PetService {
       
       const pets = snapshot.docs.map(doc => {
         const data = doc.data();
+        
+        // Ensure photos is always an array
+        let photos = Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []);
+        
         const pet = {
           id: doc.id,
           ...data,
-          // Ensure photos is always an array
-          photos: Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []),
+          photos: photos, // Store URLs
           videos: Array.isArray(data.videos) ? data.videos : (data.videos ? [data.videos] : []),
           tags: Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []),
           createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
@@ -548,7 +523,6 @@ export class PetService {
             name: (pet as any).name,
             photosCount: pet.photos?.length || 0,
             photos: pet.photos,
-            rawPhotos: data.photos,
           });
         }
         
@@ -581,6 +555,25 @@ export class PetService {
           cleanUpdates[key] = updates[key];
         }
       });
+      
+      // Validate photos if they're being updated
+      if (cleanUpdates.photos) {
+        if (!Array.isArray(cleanUpdates.photos) || cleanUpdates.photos.length === 0) {
+          throw new Error('Pet must have at least one photo');
+        }
+        
+        // Ensure all photos are valid URLs
+        const validPhotos = cleanUpdates.photos.filter((photo: string) => 
+          photo && typeof photo === 'string' && photo.trim().length > 0
+        );
+        
+        if (validPhotos.length === 0) {
+          throw new Error('No valid photo URLs found. All photos must be provided.');
+        }
+        
+        cleanUpdates.photos = validPhotos;
+        console.log('PetService: Validated photos:', validPhotos.length, 'URLs');
+      }
       
       cleanUpdates.updatedAt = new Date().toISOString();
       
@@ -976,6 +969,5 @@ export class MapSpotService {
 
 // Initialize Firebase
 console.log('Firebase initialized with config:', firebaseConfig);
-console.log('Firebase Storage initialized:', !!storage);
 console.log('Firebase Auth initialized:', !!auth);
 console.log('Firebase Firestore initialized:', !!db);

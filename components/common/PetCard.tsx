@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, { 
@@ -30,6 +30,18 @@ export const PetCard: React.FC<PetCardProps> = ({
   onFavoritePress,
 }) => {
   const scale = useSharedValue(1);
+  
+  // Get first photo URL
+  const imageURL = pet.photos && Array.isArray(pet.photos) && pet.photos.length > 0 
+    ? pet.photos[0] 
+    : null;
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('PetCard: Pet ID:', pet.id);
+    console.log('PetCard: Photos array:', pet.photos);
+    console.log('PetCard: Image URL:', imageURL ? `${imageURL.substring(0, 50)}...` : 'null');
+  }, [pet.id, pet.photos, imageURL]);
   
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -67,9 +79,7 @@ export const PetCard: React.FC<PetCardProps> = ({
       <View style={styles.imageContainer}>
         <Image
           source={{ 
-            uri: (pet.photos && Array.isArray(pet.photos) && pet.photos.length > 0 && pet.photos[0]) 
-              ? pet.photos[0] 
-              : 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg' 
+            uri: imageURL || 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg'
           }}
           style={styles.image}
           contentFit="cover"
