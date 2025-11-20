@@ -153,7 +153,10 @@ export default function MessagesScreen() {
       >
         <View style={styles.avatarContainer}>
           {otherUser.photoURL ? (
-            <Image source={{ uri: otherUser.photoURL }} style={styles.avatar} />
+            <Image 
+              source={{ uri: otherUser.photoURL }} 
+              style={styles.avatar} 
+            />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarText}>{initials}</Text>
@@ -189,7 +192,10 @@ export default function MessagesScreen() {
       >
         <View style={styles.avatarContainer}>
           {item.photoURL ? (
-            <Image source={{ uri: item.photoURL }} style={styles.avatar} />
+            <Image 
+              source={{ uri: item.photoURL }} 
+              style={styles.avatar} 
+            />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarText}>{initials}</Text>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, Play, Camera, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { theme } from '../../theme';
 import { Pet } from '../../types';
+import { FirebaseStorage } from '../../services/firebase';
 
 interface MediaGalleryModalProps {
   visible: boolean;
@@ -30,6 +31,7 @@ export const MediaGalleryModal: React.FC<MediaGalleryModalProps> = ({
   pet,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [mediaURLs, setMediaURLs] = useState<{ [key: number]: string }>({});
   const flatListRef = useRef<FlatList>(null);
 
   if (!pet) return null;
@@ -39,9 +41,44 @@ export const MediaGalleryModal: React.FC<MediaGalleryModalProps> = ({
   const videos = Array.isArray(pet.videos) ? pet.videos : [];
 
   const allMedia = [
-    ...photos.map(photo => ({ type: 'photo' as const, url: photo })),
-    ...videos.map(video => ({ type: 'video' as const, url: video }))
+    ...photos.map((photo, index) => ({ type: 'photo' as const, path: photo, index })),
+    ...videos.map((video, index) => ({ type: 'video' as const, path: video, index: photos.length + index }))
   ];
+
+  // Convert base64 strings to data URLs
+  useEffect(() => {
+    const convertBase64ToURLs = () => {
+      const urlMap: { [key: number]: string } = {};
+      
+      for (const media of allMedia) {
+        if (media.path) {
+          try {
+            // If it's already a URL, use it directly
+            if (media.path.startsWith('http://') || media.path.startsWith('https://')) {
+              urlMap[media.index] = media.path;
+            } else if (media.path.startsWith('data:')) {
+              // It's already a data URL
+              urlMap[media.index] = media.path;
+            } else {
+              // Already a URL, use it directly
+              urlMap[media.index] = media.path;
+            }
+          } catch (error) {
+            console.error('Error converting base64 to URL:', error);
+            // Use placeholder if conversion fails
+            urlMap[media.index] = 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg';
+          }
+        }
+      }
+      
+      setMediaURLs(urlMap);
+    };
+
+    if (allMedia.length > 0) {
+      convertBase64ToURLs();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pet?.photos?.length, pet?.videos?.length]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -65,26 +102,30 @@ export const MediaGalleryModal: React.FC<MediaGalleryModalProps> = ({
     }
   };
 
-  const renderMediaItem = ({ item, index }: { item: any; index: number }) => (
-    <View style={styles.mediaItem}>
-      {item.type === 'photo' ? (
-        <Image source={{ uri: item.url }} style={styles.mediaImage} resizeMode="cover" />
-      ) : (
-        <View style={styles.videoContainer}>
-          <Image 
-            source={{ uri: 'https://via.placeholder.com/400x600/8B5CF6/FFFFFF?text=Video' }} 
-            style={styles.mediaImage} 
-            resizeMode="cover"
-          />
-          <View style={styles.videoOverlay}>
-            <TouchableOpacity style={styles.playButton}>
-              <Play size={40} color="white" fill="white" />
-            </TouchableOpacity>
+  const renderMediaItem = ({ item, index }: { item: any; index: number }) => {
+    const mediaURL = mediaURLs[item.index] || 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg';
+    
+    return (
+      <View style={styles.mediaItem}>
+        {item.type === 'photo' ? (
+          <Image source={{ uri: mediaURL }} style={styles.mediaImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.videoContainer}>
+            <Image 
+              source={{ uri: mediaURL }} 
+              style={styles.mediaImage} 
+              resizeMode="cover"
+            />
+            <View style={styles.videoOverlay}>
+              <TouchableOpacity style={styles.playButton}>
+                <Play size={40} color="white" fill="white" />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      )}
-    </View>
-  );
+        )}
+      </View>
+    );
+  };
 
   return (
     <Modal
@@ -161,31 +202,35 @@ export const MediaGalleryModal: React.FC<MediaGalleryModalProps> = ({
         <View style={styles.thumbnailStrip}>
           <FlatList
             data={allMedia}
-            renderItem={({ item, index }) => (
-              <TouchableOpacity
-                style={[
-                  styles.thumbnail,
-                  currentIndex === index && styles.thumbnailActive
-                ]}
-                onPress={() => {
-                  flatListRef.current?.scrollToIndex({ index, animated: true });
-                }}
-              >
-                {item.type === 'photo' ? (
-                  <Image source={{ uri: item.url }} style={styles.thumbnailImage} />
-                ) : (
-                  <View style={styles.thumbnailVideo}>
-                    <Image 
-                      source={{ uri: 'https://via.placeholder.com/60x60/8B5CF6/FFFFFF?text=V' }} 
-                      style={styles.thumbnailImage} 
-                    />
-                    <View style={styles.thumbnailPlayIcon}>
-                      <Play size={12} color="white" />
+            renderItem={({ item, index }) => {
+              const mediaURL = mediaURLs[item.index] || 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg';
+              
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.thumbnail,
+                    currentIndex === index && styles.thumbnailActive
+                  ]}
+                  onPress={() => {
+                    flatListRef.current?.scrollToIndex({ index, animated: true });
+                  }}
+                >
+                  {item.type === 'photo' ? (
+                    <Image source={{ uri: mediaURL }} style={styles.thumbnailImage} />
+                  ) : (
+                    <View style={styles.thumbnailVideo}>
+                      <Image 
+                        source={{ uri: mediaURL }} 
+                        style={styles.thumbnailImage} 
+                      />
+                      <View style={styles.thumbnailPlayIcon}>
+                        <Play size={12} color="white" />
+                      </View>
                     </View>
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
+                  )}
+                </TouchableOpacity>
+              );
+            }}
             keyExtractor={(item, index) => `thumb-${item.type}-${index}`}
             horizontal
             showsHorizontalScrollIndicator={false}
