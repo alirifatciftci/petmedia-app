@@ -43,19 +43,80 @@ import Constants from 'expo-constants';
 const getFirebaseConfig = () => {
   const extra = Constants.expoConfig?.extra || {};
   
-  const config = {
-    apiKey: extra.firebaseApiKey || process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
-    authDomain: extra.firebaseAuthDomain || process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-    projectId: extra.firebaseProjectId || process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '',
-    storageBucket: extra.firebaseStorageBucket || process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-    messagingSenderId: extra.firebaseMessagingSenderId || process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-    appId: extra.firebaseAppId || process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
-    measurementId: extra.firebaseMeasurementId || process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || '',
+  // Development fallback values (for local development only)
+  const devFallback = {
+    apiKey: 'AIzaSyB9zqqbVuCaPO3tL1uMhXcCPi-F7rJmcr0',
+    authDomain: 'petmedia-app-v2.firebaseapp.com',
+    projectId: 'petmedia-app-v2',
+    storageBucket: 'petmedia-app-v2.firebasestorage.app',
+    messagingSenderId: '17357521540',
+    appId: '1:17357521540:web:c7168bf86db8697c5df8d1',
+    measurementId: 'G-9W68V4VT5D',
   };
+  
+  // Helper function to check if a value is a placeholder
+  const isPlaceholder = (value: string | undefined): boolean => {
+    if (!value) return true;
+    const placeholderPatterns = [
+      'your_firebase',
+      'your_project',
+      'your_',
+      '123456789',
+      'abcdef',
+    ];
+    return placeholderPatterns.some(pattern => value.toLowerCase().includes(pattern));
+  };
+  
+  // Get from Constants.expoConfig.extra first (set in app.config.js)
+  // Then fallback to process.env (for runtime access)
+  // Finally use development fallback values if placeholder or missing
+  const getValue = (extraValue: string | undefined, envValue: string | undefined, fallback: string): string => {
+    // Check if extra value is valid (not placeholder)
+    if (extraValue && !isPlaceholder(extraValue)) {
+      return extraValue;
+    }
+    // Check if env value is valid (not placeholder)
+    if (envValue && !isPlaceholder(envValue)) {
+      return envValue;
+    }
+    // Use fallback
+    return fallback;
+  };
+  
+  const config = {
+    apiKey: getValue(extra.firebaseApiKey, process.env.EXPO_PUBLIC_FIREBASE_API_KEY, devFallback.apiKey),
+    authDomain: getValue(extra.firebaseAuthDomain, process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN, devFallback.authDomain),
+    projectId: getValue(extra.firebaseProjectId, process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID, devFallback.projectId),
+    storageBucket: getValue(extra.firebaseStorageBucket, process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET, devFallback.storageBucket),
+    messagingSenderId: getValue(extra.firebaseMessagingSenderId, process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID, devFallback.messagingSenderId),
+    appId: getValue(extra.firebaseAppId, process.env.EXPO_PUBLIC_FIREBASE_APP_ID, devFallback.appId),
+    measurementId: getValue(extra.firebaseMeasurementId, process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID, devFallback.measurementId),
+  };
+  
+  // Debug: Log what we're getting (only in development)
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    console.log('Firebase Config Debug:', {
+      hasExtra: !!Constants.expoConfig?.extra,
+      extraKeys: Object.keys(extra),
+      apiKeySource: extra.firebaseApiKey && !isPlaceholder(extra.firebaseApiKey) ? 'app.config.js' : 
+                    (process.env.EXPO_PUBLIC_FIREBASE_API_KEY && !isPlaceholder(process.env.EXPO_PUBLIC_FIREBASE_API_KEY) ? 'env' : 'fallback'),
+      apiKeyPreview: config.apiKey.substring(0, 15) + '...',
+      projectId: config.projectId,
+    });
+  }
   
   // Validate that required config is present
   if (!config.apiKey || !config.projectId) {
-    console.warn('Firebase: Missing required configuration. Please set EXPO_PUBLIC_FIREBASE_* environment variables.');
+    console.error('Firebase: Missing required configuration!', {
+      apiKey: config.apiKey ? '***' : 'MISSING',
+      projectId: config.projectId || 'MISSING',
+    });
+    console.warn('Firebase: Please set EXPO_PUBLIC_FIREBASE_* environment variables in .env file or restart Expo server.');
+  } else {
+    console.log('Firebase: Configuration loaded successfully', {
+      apiKey: config.apiKey.substring(0, 10) + '...',
+      projectId: config.projectId,
+    });
   }
   
   return config;

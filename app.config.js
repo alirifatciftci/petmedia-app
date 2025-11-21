@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 export default {
   expo: {
     name: "PetMedia",
@@ -51,14 +54,21 @@ export default {
       },
       // Firebase configuration from environment variables
       // Set EXPO_PUBLIC_FIREBASE_* in .env file or environment
-      // DO NOT hardcode credentials here - use .env file instead
-      firebaseApiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "",
-      firebaseAuthDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
-      firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "",
-      firebaseStorageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
-      firebaseMessagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
-      firebaseAppId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "",
-      firebaseMeasurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || "",
+      // Fallback values for development (remove in production)
+      firebaseApiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 
+                      (process.env.NODE_ENV !== 'production' ? 'AIzaSyB9zqqbVuCaPO3tL1uMhXcCPi-F7rJmcr0' : ''),
+      firebaseAuthDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 
+                          (process.env.NODE_ENV !== 'production' ? 'petmedia-app-v2.firebaseapp.com' : ''),
+      firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 
+                         (process.env.NODE_ENV !== 'production' ? 'petmedia-app-v2' : ''),
+      firebaseStorageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 
+                              (process.env.NODE_ENV !== 'production' ? 'petmedia-app-v2.firebasestorage.app' : ''),
+      firebaseMessagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 
+                                 (process.env.NODE_ENV !== 'production' ? '17357521540' : ''),
+      firebaseAppId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || 
+                     (process.env.NODE_ENV !== 'production' ? '1:17357521540:web:c7168bf86db8697c5df8d1' : ''),
+      firebaseMeasurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || 
+                             (process.env.NODE_ENV !== 'production' ? 'G-9W68V4VT5D' : ''),
     }
   }
 };
