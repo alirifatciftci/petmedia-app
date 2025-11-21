@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Animated,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,7 +18,12 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({ onComplete }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-  const { width } = Dimensions.get('window');
+  const onCompleteRef = useRef(onComplete);
+  
+  // Update ref when onComplete changes
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     // Start animations
@@ -49,9 +53,10 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({ onComplete }) => {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      onComplete();
+      onCompleteRef.current();
     });
-  }, [fadeAnim, scaleAnim, slideAnim, onComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount
 
   return (
     <SafeAreaView style={styles.safeArea}>
