@@ -35,18 +35,33 @@ import {
   DocumentData
 } from 'firebase/firestore';
 import * as FileSystem from 'expo-file-system';
+import Constants from 'expo-constants';
 
-// Firebase configuration (petmedia-app-v2)
-// For production, move these to environment variables
-export const firebaseConfig = {
-  apiKey: "AIzaSyB9zqqbVuCaPO3tL1uMhXcCPi-F7rJmcr0",
-  authDomain: "petmedia-app-v2.firebaseapp.com",
-  projectId: "petmedia-app-v2",
-  storageBucket: "petmedia-app-v2.firebasestorage.app",
-  messagingSenderId: "17357521540",
-  appId: "1:17357521540:web:c7168bf86db8697c5df8d1",
-  measurementId: "G-9W68V4VT5D"
+// Firebase configuration from environment variables
+// Set these in .env file with EXPO_PUBLIC_* prefix or in app.config.js
+// DO NOT commit actual credentials to git
+const getFirebaseConfig = () => {
+  const extra = Constants.expoConfig?.extra || {};
+  
+  const config = {
+    apiKey: extra.firebaseApiKey || process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
+    authDomain: extra.firebaseAuthDomain || process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+    projectId: extra.firebaseProjectId || process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '',
+    storageBucket: extra.firebaseStorageBucket || process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+    messagingSenderId: extra.firebaseMessagingSenderId || process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+    appId: extra.firebaseAppId || process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
+    measurementId: extra.firebaseMeasurementId || process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || '',
+  };
+  
+  // Validate that required config is present
+  if (!config.apiKey || !config.projectId) {
+    console.warn('Firebase: Missing required configuration. Please set EXPO_PUBLIC_FIREBASE_* environment variables.');
+  }
+  
+  return config;
 };
+
+export const firebaseConfig = getFirebaseConfig();
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
