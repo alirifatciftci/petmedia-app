@@ -48,7 +48,7 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({ visible, onClose
     try {
       // Get favorites from Firestore (most up-to-date)
       const profileData = await UserProfileService.getUserProfile(user.id);
-      const favoriteIds = profileData?.favorites || user.favorites || storeFavorites || [];
+      const favoriteIds = profileData?.favorites || user.favorites || [];
 
       console.log('FavoritesModal: Loading favorite pets, IDs:', favoriteIds);
 
@@ -70,7 +70,7 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({ visible, onClose
       });
 
       const pets = await Promise.all(petPromises);
-      const validPets = pets.filter((pet): pet is Pet => pet !== null);
+      const validPets = pets.filter((pet: Pet | null): pet is Pet => pet !== null);
 
       console.log('FavoritesModal: Loaded favorite pets:', validPets.length);
       setFavoritePets(validPets);
