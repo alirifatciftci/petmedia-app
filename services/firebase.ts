@@ -710,22 +710,33 @@ export class MessageService {
   static async getThreadMessages(threadId: string) {
     try {
       const messagesCollection = firestoreCollection(db, 'messages');
+      // Use query without orderBy to avoid index requirement
+      // We'll sort client-side instead
       const q = query(
         messagesCollection,
-        where('threadId', '==', threadId),
-        orderBy('createdAt', 'asc')
+        where('threadId', '==', threadId)
       );
+      
       const snapshot = await getDocs(q);
       
-      return snapshot.docs.map(doc => {
+      const messages = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
           ...data,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(),
         };
       });
-    } catch (error) {
+      
+      // Sort by createdAt (client-side sorting)
+      messages.sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      return messages;
+    } catch (error: any) {
       console.error('MessageService: Error getting messages:', error);
       throw error;
     }
@@ -777,6 +788,39 @@ export class MessageService {
     }
   }
 
+  // Get chat by ID
+  static async getChatById(chatId: string) {
+    try {
+      console.log('MessageService: Getting chat by ID:', chatId);
+      const chatRef = firestoreDoc(db, 'chats', chatId);
+      const chatSnap = await getDoc(chatRef);
+      
+      if (!chatSnap.exists()) {
+        console.warn('MessageService: Chat not found:', chatId);
+        return null;
+      }
+      
+      const data = chatSnap.data();
+      return {
+        id: chatSnap.id,
+        participants: data.participants || [],
+        user1Id: data.user1Id || '',
+        user1Name: data.user1Name || '',
+        user1Photo: data.user1Photo || '',
+        user2Id: data.user2Id || '',
+        user2Name: data.user2Name || '',
+        user2Photo: data.user2Photo || '',
+        lastMessage: data.lastMessage || null,
+        createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+        updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+        lastMessageAt: data.lastMessageAt ? new Date(data.lastMessageAt) : null,
+      };
+    } catch (error) {
+      console.error('MessageService: Error getting chat by ID:', error);
+      throw error;
+    }
+  }
+
   // Mark messages as read
   static async markAsRead(threadId: string, userId: string) {
     try {
@@ -816,23 +860,43 @@ export class MessageService {
     callback: (messages: any[]) => void
   ) {
     const messagesCollection = firestoreCollection(db, 'messages');
+    
+    // Use query without orderBy to avoid index requirement
+    // We'll sort client-side instead
     const q = query(
       messagesCollection,
-      where('threadId', '==', threadId),
-      orderBy('createdAt', 'asc')
+      where('threadId', '==', threadId)
     );
     
-    return onSnapshot(q, (snapshot) => {
-      const messages = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-        };
-      });
-      callback(messages);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        console.log('MessageService: Received', snapshot.docs.length, 'messages in subscription');
+        const messages = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(),
+          };
+        });
+        
+        // Sort by createdAt (client-side sorting)
+        messages.sort((a, b) => {
+          const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateA.getTime() - dateB.getTime();
+        });
+        
+        console.log('MessageService: Calling callback with', messages.length, 'messages');
+        callback(messages);
+      },
+      (error) => {
+        console.error('MessageService: Subscription error:', error);
+        // Return empty array on error to prevent app crash
+        callback([]);
+      }
+    );
   }
 }
 
@@ -943,8 +1007,8 @@ export class MapSpotService {
         return {
           id: doc.id,
           ...data,
-          createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt) : new Date(),
-          lastUpdatedAt: data.lastUpdatedAt ? (typeof data.lastUpdatedAt === 'string' ? new Date(data.lastUpdatedAt) : data.lastUpdatedAt) : new Date(),
+          createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(),
+          lastUpdatedAt: data.lastUpdatedAt ? (typeof data.lastUpdatedAt === 'string' ? new Date(data.lastUpdatedAt) : data.lastUpdatedAt.toDate ? data.lastUpdatedAt.toDate() : new Date(data.lastUpdatedAt)) : new Date(),
         };
       });
       
@@ -963,6 +1027,131 @@ export class MapSpotService {
     } catch (error) {
       console.error('MapSpotService: Error getting map spots count:', error);
       return 0;
+    }
+  }
+
+  static async getAllMapSpots() {
+    try {
+      console.log('MapSpotService: Getting all map spots');
+      const spotsCollection = firestoreCollection(db, 'mapSpots');
+      const q = query(spotsCollection, orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      
+      console.log(`MapSpotService: Found ${snapshot.docs.length} total map spots`);
+      
+      const spots = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          coords: data.coords || { latitude: 0, longitude: 0 },
+          createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(),
+          lastUpdatedAt: data.lastUpdatedAt ? (typeof data.lastUpdatedAt === 'string' ? new Date(data.lastUpdatedAt) : data.lastUpdatedAt.toDate ? data.lastUpdatedAt.toDate() : new Date(data.lastUpdatedAt)) : new Date(),
+        };
+      });
+      
+      return spots;
+    } catch (error) {
+      console.error('MapSpotService: Error getting all map spots:', error);
+      return [];
+    }
+  }
+
+  static subscribeToMapSpots(
+    callback: (spots: any[]) => void,
+    onError?: (error: Error) => void
+  ) {
+    try {
+      console.log('MapSpotService: Subscribing to map spots');
+      const spotsCollection = firestoreCollection(db, 'mapSpots');
+      const q = query(spotsCollection, orderBy('createdAt', 'desc'));
+      
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          console.log(`MapSpotService: Received ${snapshot.docs.length} map spots`);
+          const spots = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              coords: data.coords || { latitude: 0, longitude: 0 },
+              createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(),
+              lastUpdatedAt: data.lastUpdatedAt ? (typeof data.lastUpdatedAt === 'string' ? new Date(data.lastUpdatedAt) : data.lastUpdatedAt.toDate ? data.lastUpdatedAt.toDate() : new Date(data.lastUpdatedAt)) : new Date(),
+            };
+          });
+          callback(spots);
+        },
+        (error) => {
+          console.error('MapSpotService: Error in subscription:', error);
+          if (onError) onError(error);
+        }
+      );
+    } catch (error) {
+      console.error('MapSpotService: Error setting up subscription:', error);
+      if (onError) onError(error as Error);
+      return () => {}; // Return empty unsubscribe function
+    }
+  }
+
+  static async createMapSpot(spotData: {
+    creatorId: string;
+    type: 'food' | 'water' | 'both' | 'veterinary' | 'shelter';
+    title: string;
+    note?: string;
+    coords: { latitude: number; longitude: number };
+    photoURL?: string;
+  }) {
+    try {
+      console.log('MapSpotService: Creating map spot:', spotData);
+      const spotsCollection = firestoreCollection(db, 'mapSpots');
+      
+      const newSpot = {
+        creatorId: spotData.creatorId,
+        type: spotData.type,
+        title: spotData.title,
+        note: spotData.note || '',
+        coords: spotData.coords,
+        photoURL: spotData.photoURL || '',
+        contributorsCount: 1, // Creator is the first contributor
+        createdAt: new Date(),
+        lastUpdatedAt: new Date(),
+      };
+      
+      const docRef = await addDoc(spotsCollection, newSpot);
+      console.log('MapSpotService: Map spot created with ID:', docRef.id);
+      
+      return {
+        id: docRef.id,
+        ...newSpot,
+      };
+    } catch (error) {
+      console.error('MapSpotService: Error creating map spot:', error);
+      throw error;
+    }
+  }
+
+  static async contributeToSpot(spotId: string) {
+    try {
+      console.log('MapSpotService: Contributing to spot:', spotId);
+      const spotRef = firestoreDoc(db, 'mapSpots', spotId);
+      const spotDoc = await getDoc(spotRef);
+      
+      if (!spotDoc.exists()) {
+        throw new Error('Map spot not found');
+      }
+      
+      const currentCount = spotDoc.data()?.contributorsCount || 0;
+      await updateDoc(spotRef, {
+        contributorsCount: currentCount + 1,
+        lastUpdatedAt: new Date(),
+      });
+      
+      console.log('MapSpotService: Contribution added to spot:', spotId);
+      return true;
+    } catch (error) {
+      console.error('MapSpotService: Error contributing to spot:', error);
+      throw error;
     }
   }
 }

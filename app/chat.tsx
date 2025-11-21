@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +20,12 @@ import { theme } from '../theme';
 import { useAuthStore } from '../stores/authStore';
 import { MessageService } from '../services/firebase';
 import { UserProfileModal } from '../components/profile/UserProfileModal';
+
+interface ChatUserInfo {
+  id: string;
+  name: string;
+  photo: string;
+}
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -30,15 +37,25 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [otherUserInfo, setOtherUserInfo] = useState<ChatUserInfo | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
-  const otherUserId = params.otherUserId as string || params.userId as string;
-  const otherUserName = params.otherUserName as string || params.userName as string || 'Kullanıcı';
-  const otherUserPhoto = params.otherUserPhoto as string || params.userPhoto as string || '';
+  const otherUserIdParam = (params.otherUserId as string) || (params.userId as string);
+  const otherUserNameParam = (params.otherUserName as string) || (params.userName as string) || 'Kullanıcı';
+  const otherUserPhotoParam = (params.otherUserPhoto as string) || (params.userPhoto as string) || '';
   const chatIdParam = params.chatId as string;
 
   useEffect(() => {
-    if (!user?.id || !otherUserId) return;
+    if (!user?.id) {
+      console.warn('ChatScreen: User not logged in');
+      return;
+    }
+
+    if (!otherUserIdParam && !chatIdParam) {
+      console.warn('ChatScreen: No otherUserId or chatId provided');
+      setLoading(false);
+      return;
+    }
 
     const initializeChat = async () => {
       try {
@@ -46,13 +63,52 @@ export default function ChatScreen() {
         
         // If chatId is provided, use it directly; otherwise get or create thread
         let newThreadId: string;
+        let otherUser: ChatUserInfo;
+        
         if (chatIdParam) {
           console.log('ChatScreen: Using provided chatId:', chatIdParam);
           newThreadId = chatIdParam;
-        } else {
-          console.log('ChatScreen: Getting or creating thread for users:', user.id, otherUserId);
-          newThreadId = await MessageService.getOrCreateThread(user.id, otherUserId);
+          
+          // If we have chatId but no otherUserId, get chat info
+          if (!otherUserIdParam) {
+            const chatData = await MessageService.getChatById(chatIdParam);
+            if (chatData) {
+              const isUser1 = chatData.user1Id === user.id;
+              otherUser = {
+                id: isUser1 ? chatData.user2Id : chatData.user1Id,
+                name: isUser1 ? chatData.user2Name : chatData.user1Name,
+                photo: isUser1 ? chatData.user2Photo : chatData.user1Photo,
+              };
+              setOtherUserInfo(otherUser);
+            } else {
+              console.error('ChatScreen: Chat not found');
+              setLoading(false);
+              return;
+            }
+          } else {
+            // We have both chatId and otherUserId, use params
+            otherUser = {
+              id: otherUserIdParam,
+              name: otherUserNameParam,
+              photo: otherUserPhotoParam,
+            };
+            setOtherUserInfo(otherUser);
+          }
+        } else if (otherUserIdParam) {
+          console.log('ChatScreen: Getting or creating thread for users:', user.id, otherUserIdParam);
+          newThreadId = await MessageService.getOrCreateThread(user.id, otherUserIdParam);
           console.log('ChatScreen: Thread ID:', newThreadId);
+          
+          otherUser = {
+            id: otherUserIdParam,
+            name: otherUserNameParam,
+            photo: otherUserPhotoParam,
+          };
+          setOtherUserInfo(otherUser);
+        } else {
+          console.error('ChatScreen: Cannot initialize chat - missing both chatId and otherUserId');
+          setLoading(false);
+          return;
         }
         
         setThreadId(newThreadId);
@@ -81,7 +137,7 @@ export default function ChatScreen() {
         setLoading(false);
 
         return () => {
-          unsubscribe();
+          if (unsubscribe) unsubscribe();
         };
       } catch (error) {
         console.error('Error initializing chat:', error);
@@ -93,9 +149,11 @@ export default function ChatScreen() {
     return () => {
       cleanup.then((unsubscribe) => {
         if (unsubscribe) unsubscribe();
+      }).catch((error) => {
+        console.error('Error in cleanup:', error);
       });
     };
-  }, [user?.id, otherUserId, chatIdParam]);
+  }, [user?.id, otherUserIdParam, chatIdParam]);
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !threadId || !user?.id || sending) return;
@@ -105,15 +163,20 @@ export default function ChatScreen() {
     setSending(true);
 
     try {
-      await MessageService.sendMessage(threadId, user.id, text);
-      // Scroll to bottom after sending
+      console.log('ChatScreen: Sending message:', text);
+      const messageId = await MessageService.sendMessage(threadId, user.id, text);
+      console.log('ChatScreen: Message sent successfully, ID:', messageId);
+      
+      // Real-time subscription will update the messages automatically
+      // But we can also manually refresh to ensure it appears
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      }, 200);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('ChatScreen: Error sending message:', error);
       // Restore message text on error
       setMessageText(text);
+      Alert.alert('Hata', 'Mesaj gönderilirken bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setSending(false);
     }
@@ -190,16 +253,16 @@ export default function ChatScreen() {
             onPress={() => setShowUserProfile(true)}
             activeOpacity={0.7}
           >
-            {otherUserPhoto && otherUserPhoto.trim() !== '' ? (
-              <Image source={{ uri: otherUserPhoto }} style={styles.headerAvatar} />
+            {otherUserInfo && (otherUserInfo.photo && otherUserInfo.photo.trim() !== '' ? (
+              <Image source={{ uri: otherUserInfo.photo }} style={styles.headerAvatar} />
             ) : (
               <View style={styles.headerAvatarPlaceholder}>
                 <Text style={styles.headerAvatarText}>
-                  {otherUserName.charAt(0).toUpperCase()}
+                  {otherUserInfo.name.charAt(0).toUpperCase()}
                 </Text>
               </View>
-            )}
-            <Text style={styles.headerTitle}>{otherUserName}</Text>
+            ))}
+            <Text style={styles.headerTitle}>{otherUserInfo?.name || otherUserNameParam}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
@@ -207,13 +270,15 @@ export default function ChatScreen() {
         </View>
         
         {/* User Profile Modal */}
-        <UserProfileModal
-          visible={showUserProfile}
-          onClose={() => setShowUserProfile(false)}
-          userId={otherUserId}
-          userName={otherUserName}
-          userPhoto={otherUserPhoto}
-        />
+        {otherUserInfo && (
+          <UserProfileModal
+            visible={showUserProfile}
+            onClose={() => setShowUserProfile(false)}
+            userId={otherUserInfo.id}
+            userName={otherUserInfo.name}
+            userPhoto={otherUserInfo.photo}
+          />
+        )}
       </SafeAreaView>
     );
   }
@@ -234,27 +299,29 @@ export default function ChatScreen() {
           onPress={() => setShowUserProfile(true)}
           activeOpacity={0.7}
         >
-          {otherUserPhoto && otherUserPhoto.trim() !== '' ? (
-            <Image source={{ uri: otherUserPhoto }} style={styles.headerAvatar} />
+          {otherUserInfo && (otherUserInfo.photo && otherUserInfo.photo.trim() !== '' ? (
+            <Image source={{ uri: otherUserInfo.photo }} style={styles.headerAvatar} />
           ) : (
             <View style={styles.headerAvatarPlaceholder}>
               <Text style={styles.headerAvatarText}>
-                {otherUserName.charAt(0).toUpperCase()}
+                {otherUserInfo.name.charAt(0).toUpperCase()}
               </Text>
             </View>
-          )}
-          <Text style={styles.headerTitle}>{otherUserName}</Text>
+          ))}
+          <Text style={styles.headerTitle}>{otherUserInfo?.name || otherUserNameParam}</Text>
         </TouchableOpacity>
       </View>
 
       {/* User Profile Modal */}
-      <UserProfileModal
-        visible={showUserProfile}
-        onClose={() => setShowUserProfile(false)}
-        userId={otherUserId}
-        userName={otherUserName}
-        userPhoto={otherUserPhoto}
-      />
+      {otherUserInfo && (
+        <UserProfileModal
+          visible={showUserProfile}
+          onClose={() => setShowUserProfile(false)}
+          userId={otherUserInfo.id}
+          userName={otherUserInfo.name}
+          userPhoto={otherUserInfo.photo}
+        />
+      )}
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
