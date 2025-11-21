@@ -107,27 +107,44 @@ export default function MessagesScreen() {
     }
   };
 
-  const handleUserSelect = (selectedUser: any) => {
-    setShowNewMessageModal(false);
-    setSearchQuery('');
-    router.push({
-      pathname: '/chat',
-      params: {
-        userId: selectedUser.id,
-        userName: selectedUser.displayName || selectedUser.email || 'Kullanıcı',
-        userPhoto: selectedUser.photoURL || '',
-      },
-    });
+  const handleUserSelect = async (selectedUser: any) => {
+    if (!user?.id) return;
+    
+    try {
+      setShowNewMessageModal(false);
+      setSearchQuery('');
+      
+      // Get or create chat thread first
+      const chatId = await MessageService.getOrCreateThread(user.id, selectedUser.id);
+      
+      router.push({
+        pathname: '/chat',
+        params: {
+          chatId: chatId,
+          otherUserId: selectedUser.id,
+          otherUserName: selectedUser.displayName || selectedUser.email || 'Kullanıcı',
+          otherUserPhoto: selectedUser.photoURL || '',
+        },
+      });
+    } catch (error) {
+      console.error('Error creating chat:', error);
+    }
   };
 
   const handleConversationPress = (conversation: any) => {
     const otherUser = conversation.otherUser;
+    if (!otherUser || !otherUser.id) {
+      console.error('MessagesScreen: Invalid conversation data');
+      return;
+    }
+    
     router.push({
       pathname: '/chat',
       params: {
-        userId: otherUser.id,
-        userName: otherUser.displayName || otherUser.email || 'Kullanıcı',
-        userPhoto: otherUser.photoURL || '',
+        chatId: conversation.id,
+        otherUserId: otherUser.id,
+        otherUserName: otherUser.displayName || otherUser.email || 'Kullanıcı',
+        otherUserPhoto: otherUser.photoURL || '',
       },
     });
   };
