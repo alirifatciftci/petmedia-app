@@ -6,10 +6,11 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, Region } from 'react-native-maps';
+import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,98 +25,14 @@ import {
   Shield
 } from 'lucide-react-native';
 import { theme } from '../../theme';
-import { MapSpot } from '../../types';
-
-// Mock data for map spots
-const mockMapSpots: MapSpot[] = [
-  {
-    id: '1',
-    creatorId: 'user1',
-    type: 'both',
-    title: 'Beşiktaş Dost Noktası',
-    note: 'Her gün saat 18:00\'da mama ve su koyuyorum. Sokak kedileri için güvenli alan.',
-    coords: {
-      latitude: 41.0425,
-      longitude: 29.0071,
-    },
-    contributorsCount: 12,
-    lastUpdatedAt: new Date(),
-    createdAt: new Date(),
-  },
-  {
-    id: '2',
-    creatorId: 'user2',
-    type: 'water',
-    title: 'Kadıköy Su Noktası',
-    note: 'Temiz su kabı burada. Yaz aylarında özellikle aktif.',
-    coords: {
-      latitude: 40.9897,
-      longitude: 29.0252,
-    },
-    contributorsCount: 8,
-    lastUpdatedAt: new Date(),
-    createdAt: new Date(),
-  },
-  {
-    id: '3',
-    creatorId: 'user3',
-    type: 'food',
-    title: 'Şişli Mama Noktası',
-    note: 'Kuru mama ve konserve mama bulabilirsiniz. Hafta sonları daha çok var.',
-    coords: {
-      latitude: 41.0608,
-      longitude: 28.9877,
-    },
-    contributorsCount: 15,
-    lastUpdatedAt: new Date(),
-    createdAt: new Date(),
-  },
-  {
-    id: '4',
-    creatorId: 'user4',
-    type: 'veterinary',
-    title: 'Acıbadem Veteriner Kliniği',
-    note: 'Sokak hayvanları için ücretsiz muayene. Acil durumlar için 7/24.',
-    coords: {
-      latitude: 40.8897,
-      longitude: 29.3452,
-    },
-    contributorsCount: 3,
-    lastUpdatedAt: new Date(),
-    createdAt: new Date(),
-  },
-  {
-    id: '5',
-    creatorId: 'user5',
-    type: 'shelter',
-    title: 'Pendik Hayvan Barınağı',
-    note: 'Sokak hayvanları için geçici barınma. Sahiplendirme hizmetleri.',
-    coords: {
-      latitude: 40.8755,
-      longitude: 29.2352,
-    },
-    contributorsCount: 25,
-    lastUpdatedAt: new Date(),
-    createdAt: new Date(),
-  },
-  {
-    id: '6',
-    creatorId: 'user6',
-    type: 'both',
-    title: 'Üsküdar Dost Noktası',
-    note: 'Mama ve su noktası. Çocuk parkı yanında, güvenli alan.',
-    coords: {
-      latitude: 41.0225,
-      longitude: 29.0152,
-    },
-    contributorsCount: 18,
-    lastUpdatedAt: new Date(),
-    createdAt: new Date(),
-  },
-];
+import { MapSpot, MapSpotType } from '../../types';
+import { MapSpotService } from '../../services/firebase';
+import { useAuthStore } from '../../stores/authStore';
+import { AddMapSpotModal } from '../../components/map/AddMapSpotModal';
 
 export default function MapScreen() {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
   const mapRef = useRef<MapView>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [region, setRegion] = useState<Region>({
@@ -124,19 +41,54 @@ export default function MapScreen() {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+  const [mapSpots, setMapSpots] = useState<MapSpot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedCoordinates, setSelectedCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [addingMode, setAddingMode] = useState(false);
 
   useEffect(() => {
     getCurrentLocation();
+    loadMapSpots();
+    
+    // Subscribe to real-time updates
+    const unsubscribe = MapSpotService.subscribeToMapSpots(
+      (spots) => {
+        setMapSpots(spots as MapSpot[]);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error in map spots subscription:', error);
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
+
+  const loadMapSpots = async () => {
+    try {
+      setLoading(true);
+      const spots = await MapSpotService.getAllMapSpots();
+      setMapSpots(spots as MapSpot[]);
+    } catch (error) {
+      console.error('Error loading map spots:', error);
+      Alert.alert(t('map.error'), t('map.errorLoading'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getCurrentLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          'Konum İzni',
-          'Harita özelliklerini kullanabilmek için konum izni gereklidir.',
-          [{ text: 'Tamam' }]
+          t('map.locationPermission'),
+          t('map.locationPermissionMessage'),
+          [{ text: t('common.cancel') }]
         );
         return;
       }
@@ -168,12 +120,83 @@ export default function MapScreen() {
     }
   };
 
+  const handleMapPress = (e: any) => {
+    if (addingMode) {
+      const { latitude, longitude } = e.nativeEvent.coordinate;
+      setSelectedCoordinates({ latitude, longitude });
+      setModalVisible(true);
+      setAddingMode(false);
+    }
+  };
+
   const handleAddSpot = () => {
-    // TODO: Implement add new food/water spot
+    if (!user) {
+      Alert.alert(
+        t('map.loginRequired'),
+        t('map.loginRequiredMessage'),
+        [{ text: t('common.cancel') }]
+      );
+      return;
+    }
+    setAddingMode(true);
     Alert.alert(
-      'Yeni Nokta Ekle',
-      'Bu özellik yakında eklenecek. Sokaktaki dostlarımız için yeni bir mama/su noktası ekleyebileceksiniz.',
-      [{ text: 'Tamam' }]
+      t('map.selectLocation'),
+      t('map.selectLocationMessage'),
+      [{ text: t('common.cancel') }]
+    );
+  };
+
+  const handleConfirmAddSpot = async (type: MapSpotType, title: string, note?: string) => {
+    if (!user || !selectedCoordinates) {
+      Alert.alert(t('map.error'), t('map.error'));
+      return;
+    }
+
+    try {
+      await MapSpotService.createMapSpot({
+        creatorId: user.id,
+        type,
+        title,
+        note,
+        coords: selectedCoordinates,
+      });
+      
+      setModalVisible(false);
+      setSelectedCoordinates(null);
+      Alert.alert(t('map.spotAdded'), '');
+    } catch (error) {
+      console.error('Error creating map spot:', error);
+      Alert.alert(t('map.error'), t('map.errorCreating'));
+    }
+  };
+
+  const handleMarkerPress = (spot: MapSpot) => {
+    if (!user) {
+      Alert.alert(spot.title, spot.note || '', [{ text: t('common.cancel') }]);
+      return;
+    }
+
+    Alert.alert(
+      spot.title,
+      `${spot.note || ''}\n\n${t('map.contributors')}: ${spot.contributorsCount} ${t('map.people')}`,
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('map.contribute'),
+          onPress: async () => {
+            try {
+              await MapSpotService.contributeToSpot(spot.id);
+              Alert.alert(
+                t('map.thankYou'),
+                t('map.contributeMessage')
+              );
+            } catch (error) {
+              console.error('Error contributing to spot:', error);
+              Alert.alert(t('map.error'), t('map.errorContributing'));
+            }
+          },
+        },
+      ]
     );
   };
 
@@ -194,7 +217,7 @@ export default function MapScreen() {
     }
   };
 
-  const getMarkerColors = (type: string) => {
+  const getMarkerColors = (type: string): [string, string] => {
     switch (type) {
       case 'water':
         return ['#3b82f6', '#1d4ed8'];
@@ -215,13 +238,7 @@ export default function MapScreen() {
     <Marker
       key={spot.id}
       coordinate={spot.coords}
-      onPress={() => {
-        Alert.alert(
-          spot.title,
-          `${spot.note}\n\nKatkıda bulunan: ${spot.contributorsCount} kişi`,
-          [{ text: 'Tamam' }]
-        );
-      }}
+      onPress={() => handleMarkerPress(spot)}
     >
       <View style={styles.markerContainer}>
         <LinearGradient
@@ -230,6 +247,11 @@ export default function MapScreen() {
         >
           {getMarkerIcon(spot.type)}
         </LinearGradient>
+        {spot.contributorsCount > 1 && (
+          <View style={styles.contributorBadge}>
+            <Text style={styles.contributorText}>{spot.contributorsCount}</Text>
+          </View>
+        )}
       </View>
     </Marker>
   );
@@ -240,9 +262,9 @@ export default function MapScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🐾 Dost Noktaları</Text>
+        <Text style={styles.headerTitle}>🐾 {t('map.title')}</Text>
         <Text style={styles.headerSubtitle}>
-          Sokaktaki dostlarımız için mama, su ve yardım noktaları
+          {t('map.subtitle')}
         </Text>
       </View>
 
@@ -253,12 +275,30 @@ export default function MapScreen() {
           style={styles.map}
           region={region}
           onRegionChangeComplete={setRegion}
+          onPress={handleMapPress}
           showsUserLocation={true}
           showsMyLocationButton={false}
           loadingEnabled={true}
+          provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         >
-          {mockMapSpots.map(renderMarker)}
+          {mapSpots.map(renderMarker)}
         </MapView>
+
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={theme.colors.primary[500]} />
+            <Text style={styles.loadingText}>{t('map.loading')}</Text>
+          </View>
+        )}
+
+        {addingMode && (
+          <View style={styles.addingModeOverlay}>
+            <View style={styles.addingModeCard}>
+              <MapPin size={24} color={theme.colors.primary[500]} />
+              <Text style={styles.addingModeText}>{t('map.tapToAdd')}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Floating Action Buttons */}
         <View style={styles.fabContainer}>
@@ -288,26 +328,38 @@ export default function MapScreen() {
         <View style={styles.legend}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#3b82f6' }]} />
-            <Text style={styles.legendText}>Su</Text>
+            <Text style={styles.legendText}>{t('map.water')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: theme.colors.cards.orange }]} />
-            <Text style={styles.legendText}>Mama</Text>
+            <Text style={styles.legendText}>{t('map.food')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#8b5cf6' }]} />
-            <Text style={styles.legendText}>İkisi</Text>
+            <Text style={styles.legendText}>{t('map.both')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
-            <Text style={styles.legendText}>Veteriner</Text>
+            <Text style={styles.legendText}>{t('map.veterinary')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#f59e0b' }]} />
-            <Text style={styles.legendText}>Barınak</Text>
+            <Text style={styles.legendText}>{t('map.shelter')}</Text>
           </View>
         </View>
       </View>
+
+      {/* Add Map Spot Modal */}
+      <AddMapSpotModal
+        visible={modalVisible}
+        onClose={() => {
+          setModalVisible(false);
+          setSelectedCoordinates(null);
+          setAddingMode(false);
+        }}
+        onConfirm={handleConfirmAddSpot}
+        coordinates={selectedCoordinates}
+      />
     </SafeAreaView>
   );
 }
@@ -418,5 +470,68 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.primary,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.fontSize.base,
+    fontFamily: theme.typography.fontFamily.body,
+    color: theme.colors.text.secondary,
+  },
+  addingModeOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'box-none',
+  },
+  addingModeCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  addingModeText: {
+    fontSize: theme.typography.fontSize.base,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    color: theme.colors.text.primary,
+  },
+  contributorBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: theme.colors.primary[500],
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  contributorText: {
+    fontSize: 10,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    color: 'white',
   },
 });
