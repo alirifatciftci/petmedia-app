@@ -249,21 +249,45 @@ export class FirebaseStorage {
    */
   static async uploadImage(path: string, imageUri: string): Promise<string> {
     try {
-      console.log('ImageService: Using local image URI:', imageUri);
+      console.log('📤 FirebaseStorage.uploadImage: Starting upload...');
+      console.log('📤 FirebaseStorage.uploadImage: Path:', path);
+      console.log('📤 FirebaseStorage.uploadImage: Image URI:', imageUri);
+      console.log('📤 FirebaseStorage.uploadImage: URI type:', {
+        isFile: imageUri.startsWith('file://'),
+        isHttp: imageUri.startsWith('http://') || imageUri.startsWith('https://'),
+        isData: imageUri.startsWith('data:'),
+        length: imageUri.length,
+      });
       
       // Check if user is authenticated
       const auth = getAuth();
       if (!auth.currentUser) {
+        console.error('❌ FirebaseStorage.uploadImage: User not authenticated');
         throw new Error('User must be authenticated to upload images');
       }
       
-      console.log('ImageService: User authenticated:', auth.currentUser.uid);
+      console.log('✅ FirebaseStorage.uploadImage: User authenticated:', auth.currentUser.uid);
+      
+      // ⚠️ WARNING: Currently returning local URI directly instead of uploading to Firebase Storage
+      // This means the image will only work on the current device!
+      // TODO: Implement actual Firebase Storage upload
+      console.warn('⚠️ FirebaseStorage.uploadImage: WARNING - Returning local URI instead of uploading to Firebase Storage!');
+      console.warn('⚠️ FirebaseStorage.uploadImage: This image will only work on the current device.');
+      console.warn('⚠️ FirebaseStorage.uploadImage: Local URI:', imageUri);
       
       // Return the local URI directly (same as users table)
       // This works because React Native Image component can handle file:// URIs
-      return imageUri;
+      // BUT: This won't work across devices or after app reinstall!
+      const returnedUri = imageUri;
+      console.log('📤 FirebaseStorage.uploadImage: Returning local URI:', returnedUri);
+      return returnedUri;
     } catch (error) {
-      console.error('ImageService - Upload error:', error);
+      console.error('❌ FirebaseStorage.uploadImage: Upload error:', error);
+      console.error('❌ FirebaseStorage.uploadImage: Error details:', {
+        error: error,
+        errorType: typeof error,
+        errorMessage: error instanceof Error ? error.message : 'unknown',
+      });
       throw error;
     }
   }
@@ -315,15 +339,31 @@ export class UserProfileService {
 
   static async getUserProfile(userId: string) {
     try {
+      console.log('🔍 UserProfileService.getUserProfile: Starting for userId:', userId);
       const userRef = firestoreDoc(db, 'users', userId);
+      console.log('🔍 UserProfileService.getUserProfile: Firestore path:', userRef.path);
+      
       const userSnap = await getDoc(userRef);
+      console.log('🔍 UserProfileService.getUserProfile: Document exists:', userSnap.exists());
       
       if (userSnap.exists()) {
-        return userSnap.data();
+        const data = userSnap.data();
+        console.log('🔍 UserProfileService.getUserProfile: Raw Firestore data:', JSON.stringify(data, null, 2));
+        console.log('🔍 UserProfileService.getUserProfile: photoURL from Firestore:', {
+          value: data.photoURL,
+          type: typeof data.photoURL,
+          isString: typeof data.photoURL === 'string',
+          length: typeof data.photoURL === 'string' ? data.photoURL.length : 0,
+          isEmpty: typeof data.photoURL === 'string' ? data.photoURL.trim() === '' : true,
+          startsWithFile: typeof data.photoURL === 'string' ? data.photoURL.startsWith('file://') : false,
+          startsWithHttp: typeof data.photoURL === 'string' ? (data.photoURL.startsWith('http://') || data.photoURL.startsWith('https://')) : false,
+        });
+        return data;
       }
+      console.log('🔍 UserProfileService.getUserProfile: Document does not exist');
       return null;
     } catch (error) {
-      console.error('Error getting user profile:', error);
+      console.error('❌ UserProfileService.getUserProfile: Error getting user profile:', error);
       throw error;
     }
   }

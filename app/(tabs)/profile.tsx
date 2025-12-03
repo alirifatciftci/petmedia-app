@@ -43,6 +43,21 @@ export default function ProfileScreen() {
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
   
   const photoURL = user?.photoURL || '';
+  const [imageError, setImageError] = useState(false);
+
+  // Log photoURL changes
+  useEffect(() => {
+    console.log('📸 ProfileScreen: photoURL changed:', {
+      photoURL: photoURL,
+      length: photoURL.length,
+      type: typeof photoURL,
+      isEmpty: photoURL.trim() === '',
+      isFile: photoURL.startsWith('file://'),
+      isHttp: photoURL.startsWith('http://') || photoURL.startsWith('https://'),
+      userPhotoURL: user?.photoURL,
+      imageError: imageError,
+    });
+  }, [photoURL, user?.photoURL, imageError]);
 
   const loadUserPets = useCallback(async () => {
     if (!user?.id) return;
@@ -96,7 +111,11 @@ export default function ProfileScreen() {
       loadUserPets();
       loadProfileCounts();
     }
-  }, [isAuthenticated, user?.id, loadUserPets, loadProfileCounts]);
+    // Reset image error when photoURL changes
+    if (user?.photoURL) {
+      setImageError(false);
+    }
+  }, [isAuthenticated, user?.id, user?.photoURL, loadUserPets, loadProfileCounts]);
 
   // Ekran focus olduğunda profil verilerini ve pet'leri yenile
   useFocusEffect(
@@ -108,9 +127,16 @@ export default function ProfileScreen() {
             const profileData = await UserProfileService.getUserProfile(user.id);
             if (profileData) {
               // photoURL kontrolü
+              console.log('👁️ ProfileScreen: Focus effect - refreshing profile...');
+              console.log('👁️ ProfileScreen: Current user photoURL:', user.photoURL);
+              console.log('👁️ ProfileScreen: Firestore profileData photoURL:', profileData.photoURL);
+              
               let photoURL = user.photoURL || '';
               if (profileData.photoURL && typeof profileData.photoURL === 'string' && profileData.photoURL.trim() !== '') {
                 photoURL = profileData.photoURL;
+                console.log('👁️ ProfileScreen: Using Firestore photoURL:', photoURL);
+              } else {
+                console.log('👁️ ProfileScreen: Keeping current photoURL:', photoURL);
               }
               
               const updatedUser = {
@@ -123,7 +149,12 @@ export default function ProfileScreen() {
               };
               
               setUser(updatedUser);
-              console.log('Profile refreshed on focus, photoURL:', updatedUser.photoURL);
+              console.log('✅ ProfileScreen: Profile refreshed on focus:', {
+                photoURL: updatedUser.photoURL,
+                photoURLLength: updatedUser.photoURL.length,
+                photoURLIsFile: updatedUser.photoURL.startsWith('file://'),
+                photoURLIsHttp: updatedUser.photoURL.startsWith('http://') || updatedUser.photoURL.startsWith('https://'),
+              });
             }
           } catch (error) {
             console.error('Error refreshing profile on focus:', error);
@@ -149,9 +180,16 @@ export default function ProfileScreen() {
       
       if (profileData) {
         // photoURL kontrolü: Firestore'dan gelen varsa onu kullan
+        console.log('🔄 ProfileScreen: Refreshing profile data...');
+        console.log('🔄 ProfileScreen: Current user photoURL:', user.photoURL);
+        console.log('🔄 ProfileScreen: Firestore profileData photoURL:', profileData.photoURL);
+        
         let photoURL = user.photoURL || '';
         if (profileData.photoURL && typeof profileData.photoURL === 'string' && profileData.photoURL.trim() !== '') {
           photoURL = profileData.photoURL;
+          console.log('🔄 ProfileScreen: Using Firestore photoURL:', photoURL);
+        } else {
+          console.log('🔄 ProfileScreen: Keeping current photoURL:', photoURL);
         }
         
         // Güncel verilerle user state'ini güncelle
@@ -165,8 +203,14 @@ export default function ProfileScreen() {
         };
         
         setUser(updatedUser);
-        console.log('Profile data refreshed:', updatedUser);
-        console.log('PhotoURL after refresh:', updatedUser.photoURL);
+        console.log('✅ ProfileScreen: Profile data refreshed:', {
+          displayName: updatedUser.displayName,
+          photoURL: updatedUser.photoURL,
+          photoURLLength: updatedUser.photoURL.length,
+          photoURLType: typeof updatedUser.photoURL,
+          photoURLIsFile: updatedUser.photoURL.startsWith('file://'),
+          photoURLIsHttp: updatedUser.photoURL.startsWith('http://') || updatedUser.photoURL.startsWith('https://'),
+        });
         
         // Pet'leri ve sayıları da yenile
         await loadUserPets();
@@ -260,12 +304,33 @@ export default function ProfileScreen() {
       >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          {photoURL && photoURL.trim() !== '' ? (
+          {photoURL && photoURL.trim() !== '' && !imageError ? (
             <Image 
               source={{ uri: photoURL }} 
               style={styles.profileAvatar}
               onError={(error) => {
-                console.error('Profile image load error:', error);
+                console.log('❌ ProfileScreen: Image load error:', {
+                  photoURL: photoURL,
+                  error: error,
+                  errorType: typeof error,
+                  isFile: photoURL.startsWith('file://'),
+                  isHttp: photoURL.startsWith('http://') || photoURL.startsWith('https://'),
+                });
+                // Silently handle image load errors - show placeholder instead
+                setImageError(true);
+              }}
+              onLoadStart={() => {
+                console.log('🔄 ProfileScreen: Image load started:', {
+                  photoURL: photoURL,
+                  isFile: photoURL.startsWith('file://'),
+                  isHttp: photoURL.startsWith('http://') || photoURL.startsWith('https://'),
+                });
+                setImageError(false);
+              }}
+              onLoad={() => {
+                console.log('✅ ProfileScreen: Image loaded successfully:', {
+                  photoURL: photoURL,
+                });
               }}
             />
           ) : (

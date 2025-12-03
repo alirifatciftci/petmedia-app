@@ -37,10 +37,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [userPets, setUserPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingPets, setLoadingPets] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (visible && userId) {
       loadUserProfile();
+      setImageError(false);
     }
   }, [visible, userId]);
 
@@ -100,6 +102,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const bio = user?.bio || '';
   const initials = displayName.charAt(0).toUpperCase();
 
+  // Reset image error when photoURL changes
+  useEffect(() => {
+    if (photoURL) {
+      setImageError(false);
+    }
+  }, [photoURL]);
+
   return (
     <Modal
       visible={visible}
@@ -133,10 +142,15 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               >
                 {/* Profile Header */}
                 <View style={styles.profileHeader}>
-                  {photoURL && photoURL.trim() !== '' ? (
+                  {photoURL && photoURL.trim() !== '' && !imageError ? (
                     <Image 
                       source={{ uri: photoURL }} 
                       style={styles.profileAvatar}
+                      onError={() => {
+                        // Silently handle image load errors - show placeholder instead
+                        setImageError(true);
+                      }}
+                      onLoadStart={() => setImageError(false)}
                     />
                   ) : (
                     <LinearGradient
