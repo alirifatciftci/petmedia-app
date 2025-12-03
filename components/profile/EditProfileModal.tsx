@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,21 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
     bio: user?.bio || '',
   });
   const [profileImage, setProfileImage] = useState(user?.photoURL || '');
+  const [imageError, setImageError] = useState(false);
+
+  // Log profileImage changes
+  useEffect(() => {
+    console.log('📸 EditProfileModal: profileImage changed:', {
+      profileImage: profileImage,
+      length: profileImage.length,
+      type: typeof profileImage,
+      isEmpty: profileImage.trim() === '',
+      isFile: profileImage.startsWith('file://'),
+      isHttp: profileImage.startsWith('http://') || profileImage.startsWith('https://'),
+      userPhotoURL: user?.photoURL,
+      imageError: imageError,
+    });
+  }, [profileImage, user?.photoURL, imageError]);
 
   const handleSave = async () => {
     if (!formData.displayName.trim()) {
@@ -42,12 +57,16 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
 
     setIsLoading(true);
     try {
-      console.log('Saving profile for user:', user!.id);
-      console.log('Profile data:', {
+      console.log('💾 EditProfileModal: Saving profile for user:', user!.id);
+      console.log('💾 EditProfileModal: Profile data to save:', {
         displayName: formData.displayName.trim(),
         city: formData.city.trim(),
         bio: formData.bio.trim(),
         photoURL: profileImage,
+        photoURLLength: profileImage.length,
+        photoURLType: typeof profileImage,
+        photoURLIsFile: profileImage.startsWith('file://'),
+        photoURLIsHttp: profileImage.startsWith('http://') || profileImage.startsWith('https://'),
       });
 
       // Firestore'a kaydet
@@ -57,6 +76,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
         bio: formData.bio.trim(),
         photoURL: profileImage,
       });
+      
+      console.log('✅ EditProfileModal: Profile saved to Firestore successfully');
       
       const updatedUser = {
         ...user!,
@@ -152,18 +173,39 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
       if (!result.canceled && result.assets[0]) {
         console.log('Image selected:', result.assets[0].uri);
         setIsUploadingPhoto(true);
+        setImageError(false);
         
         try {
+          console.log('📤 EditProfileModal: Starting image upload to Firebase Storage...');
+          console.log('📤 EditProfileModal: Local image URI:', result.assets[0].uri);
+          
           // Firebase Storage'a yükle
           const imagePath = `profiles/${user!.id}/profile_${Date.now()}.jpg`;
+          console.log('📤 EditProfileModal: Storage path:', imagePath);
+          
           const downloadURL = await FirebaseStorage.uploadImage(imagePath, result.assets[0].uri);
+          console.log('✅ EditProfileModal: Image uploaded successfully, downloadURL:', downloadURL);
+          console.log('✅ EditProfileModal: downloadURL details:', {
+            url: downloadURL,
+            length: downloadURL.length,
+            isHttp: downloadURL.startsWith('http://') || downloadURL.startsWith('https://'),
+            isFile: downloadURL.startsWith('file://'),
+          });
           
           setProfileImage(downloadURL);
+          setImageError(false);
           Alert.alert('Başarılı', 'Profil fotoğrafı yüklendi');
         } catch (storageError) {
-          console.error('Storage upload failed, using local URI:', storageError);
+          console.error('❌ EditProfileModal: Storage upload failed:', storageError);
+          console.error('❌ EditProfileModal: Error details:', {
+            error: storageError,
+            errorType: typeof storageError,
+            errorMessage: storageError instanceof Error ? storageError.message : 'unknown',
+          });
           // Geçici çözüm: Local URI kullan
+          console.warn('⚠️ EditProfileModal: Using local URI as fallback:', result.assets[0].uri);
           setProfileImage(result.assets[0].uri);
+          setImageError(false);
           Alert.alert(
             'Firebase Storage Gerekli', 
             'Firebase Console\'da Storage\'ı etkinleştirin:\n1. Firebase Console > Storage\n2. "Get started" butonuna tıklayın\n3. Güvenlik kurallarını ayarlayın'
@@ -229,8 +271,16 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
           {/* Profile Photo Section */}
           <View style={styles.photoSection}>
             <View style={styles.photoContainer}>
-              {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              {profileImage && !imageError ? (
+                <Image 
+                  source={{ uri: profileImage }} 
+                  style={styles.profileImage}
+                  onError={() => {
+                    // Silently handle image load errors - show placeholder instead
+                    setImageError(true);
+                  }}
+                  onLoadStart={() => setImageError(false)}
+                />
               ) : (
                 <User size={60} color={theme.colors.primary[500]} />
               )}

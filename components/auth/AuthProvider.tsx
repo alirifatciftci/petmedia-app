@@ -21,17 +21,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (firebaseUser) {
         // User is signed in - Load profile data from Firestore
         try {
-          console.log('Loading user profile from Firestore for:', firebaseUser.uid);
+          console.log('🔐 AuthProvider: Loading user profile from Firestore for:', firebaseUser.uid);
           const profileData = await UserProfileService.getUserProfile(firebaseUser.uid);
+          console.log('🔐 AuthProvider: Profile data received:', {
+            hasData: !!profileData,
+            profileDataKeys: profileData ? Object.keys(profileData) : [],
+            profileDataPhotoURL: profileData?.photoURL,
+          });
           
           if (profileData) {
             // Use Firestore data if available
             // photoURL kontrolü: Firestore'dan gelen varsa onu kullan, yoksa Firebase Auth'tan al
             let photoURL = '';
+            console.log('🔐 AuthProvider: Processing photoURL...');
+            console.log('🔐 AuthProvider: Firestore photoURL:', {
+              value: profileData.photoURL,
+              type: typeof profileData.photoURL,
+              isString: typeof profileData.photoURL === 'string',
+              isEmpty: typeof profileData.photoURL === 'string' ? profileData.photoURL.trim() === '' : true,
+            });
+            console.log('🔐 AuthProvider: Firebase Auth photoURL:', {
+              value: firebaseUser.photoURL,
+              type: typeof firebaseUser.photoURL,
+              isString: typeof firebaseUser.photoURL === 'string',
+              isEmpty: typeof firebaseUser.photoURL === 'string' ? firebaseUser.photoURL.trim() === '' : true,
+            });
+            
             if (profileData.photoURL && typeof profileData.photoURL === 'string' && profileData.photoURL.trim() !== '') {
               photoURL = profileData.photoURL;
+              console.log('🔐 AuthProvider: Using Firestore photoURL:', photoURL);
             } else if (firebaseUser.photoURL && firebaseUser.photoURL.trim() !== '') {
               photoURL = firebaseUser.photoURL;
+              console.log('🔐 AuthProvider: Using Firebase Auth photoURL:', photoURL);
+            } else {
+              console.log('🔐 AuthProvider: No photoURL found, using empty string');
             }
             
             const user = {
@@ -45,8 +68,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               createdAt: profileData.createdAt || new Date().toISOString(),
               updatedAt: profileData.updatedAt || new Date().toISOString(),
             };
-            console.log('Profile loaded from Firestore:', user);
-            console.log('PhotoURL:', user.photoURL);
+            console.log('✅ AuthProvider: Profile loaded from Firestore:', {
+              id: user.id,
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL,
+              photoURLLength: user.photoURL.length,
+              photoURLType: typeof user.photoURL,
+              photoURLIsFile: user.photoURL.startsWith('file://'),
+              photoURLIsHttp: user.photoURL.startsWith('http://') || user.photoURL.startsWith('https://'),
+            });
             setUser(user);
           } else {
             // Create default user if no profile exists

@@ -23,6 +23,7 @@ export default function MessagesScreen() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   const loadConversations = useCallback(async () => {
     if (!user?.id) return;
@@ -169,10 +170,13 @@ export default function MessagesScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.avatarContainer}>
-          {otherUser.photoURL ? (
+          {otherUser.photoURL && !imageErrors[`chat-${item.id}`] ? (
             <Image 
               source={{ uri: otherUser.photoURL }} 
-              style={styles.avatar} 
+              style={styles.avatar}
+              onError={() => {
+                setImageErrors(prev => ({ ...prev, [`chat-${item.id}`]: true }));
+              }}
             />
           ) : (
             <View style={styles.avatarPlaceholder}>
@@ -208,10 +212,13 @@ export default function MessagesScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.avatarContainer}>
-          {item.photoURL ? (
+          {item.photoURL && !imageErrors[`user-${item.id}`] ? (
             <Image 
               source={{ uri: item.photoURL }} 
-              style={styles.avatar} 
+              style={styles.avatar}
+              onError={() => {
+                setImageErrors(prev => ({ ...prev, [`user-${item.id}`]: true }));
+              }}
             />
           ) : (
             <View style={styles.avatarPlaceholder}>
