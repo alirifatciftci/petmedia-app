@@ -11,6 +11,15 @@ import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 import { UserService, MessageService } from '../../services/firebase';
 
+// Fotoğraf URL'sinin geçerli ve kalıcı olup olmadığını kontrol et
+const isValidPhotoURL = (url: string | null | undefined): boolean => {
+  if (!url || url.trim() === '') return false;
+  // file:// URL'leri geçici - uygulama kapanınca kaybolur
+  if (url.startsWith('file://')) return false;
+  // data:image (base64) veya http/https URL'leri geçerli
+  return url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://');
+};
+
 export default function MessagesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -27,13 +36,13 @@ export default function MessagesScreen() {
 
   const loadConversations = useCallback(async () => {
     if (!user?.id) return;
-    
+
     try {
       setLoading(true);
       console.log('Loading conversations for user:', user.id);
       const userChats = await MessageService.getUserConversations(user.id);
       console.log('Loaded chats:', userChats.length);
-      
+
       // Map chats to conversations with other user info from chat data
       const conversationsWithUsers = userChats.map((chat) => {
         // Determine which user is the other user
@@ -44,13 +53,13 @@ export default function MessagesScreen() {
           photoURL: isUser1 ? chat.user2Photo : chat.user1Photo,
           email: '', // Email is not stored in chat, but we have displayName
         };
-        
+
         return {
           ...chat,
           otherUser,
         };
       });
-      
+
       console.log('Setting conversations:', conversationsWithUsers.length);
       setConversations(conversationsWithUsers);
     } catch (error) {
@@ -85,17 +94,17 @@ export default function MessagesScreen() {
     setUsersError(null);
     setAllUsers([]);
     setLoadingUsers(true);
-    
+
     try {
       console.log('Loading users for user:', user?.id);
       if (!user?.id) {
         throw new Error('Kullanıcı bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
       }
-      
+
       const users = await UserService.getAllUsers(user.id);
       console.log('Loaded users:', users.length, users);
       setAllUsers(users);
-      
+
       if (users.length === 0) {
         console.warn('No users found in Firestore');
       }
@@ -110,14 +119,14 @@ export default function MessagesScreen() {
 
   const handleUserSelect = async (selectedUser: any) => {
     if (!user?.id) return;
-    
+
     try {
       setShowNewMessageModal(false);
       setSearchQuery('');
-      
+
       // Get or create chat thread first
       const chatId = await MessageService.getOrCreateThread(user.id, selectedUser.id);
-      
+
       router.push({
         pathname: '/chat',
         params: {
@@ -138,7 +147,7 @@ export default function MessagesScreen() {
       console.error('MessagesScreen: Invalid conversation data');
       return;
     }
-    
+
     router.push({
       pathname: '/chat',
       params: {
@@ -157,7 +166,7 @@ export default function MessagesScreen() {
 
   const renderConversationItem = ({ item }: { item: any }) => {
     if (!item.otherUser) return null;
-    
+
     const otherUser = item.otherUser;
     const displayName = otherUser.displayName || otherUser.email || 'Kullanıcı';
     const initials = displayName.charAt(0).toUpperCase();
@@ -170,9 +179,9 @@ export default function MessagesScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.avatarContainer}>
-          {otherUser.photoURL && !imageErrors[`chat-${item.id}`] ? (
-            <Image 
-              source={{ uri: otherUser.photoURL }} 
+          {isValidPhotoURL(otherUser.photoURL) && !imageErrors[`chat-${item.id}`] ? (
+            <Image
+              source={{ uri: otherUser.photoURL }}
               style={styles.avatar}
               onError={() => {
                 setImageErrors(prev => ({ ...prev, [`chat-${item.id}`]: true }));
@@ -212,9 +221,9 @@ export default function MessagesScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.avatarContainer}>
-          {item.photoURL && !imageErrors[`user-${item.id}`] ? (
-            <Image 
-              source={{ uri: item.photoURL }} 
+          {isValidPhotoURL(item.photoURL) && !imageErrors[`user-${item.id}`] ? (
+            <Image
+              source={{ uri: item.photoURL }}
               style={styles.avatar}
               onError={() => {
                 setImageErrors(prev => ({ ...prev, [`user-${item.id}`]: true }));
@@ -281,7 +290,7 @@ export default function MessagesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
-      
+
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('navigation.messages')}</Text>
         <TouchableOpacity
@@ -301,9 +310,9 @@ export default function MessagesScreen() {
       {conversations.length === 0 ? (
         <View style={styles.content}>
           <View style={styles.emptyState}>
-            <MessageCircle 
-              size={64} 
-              color={theme.colors.text.tertiary} 
+            <MessageCircle
+              size={64}
+              color={theme.colors.text.tertiary}
               strokeWidth={1}
             />
             <Text style={styles.emptyTitle}>Henüz mesaj yok</Text>
@@ -358,8 +367,8 @@ export default function MessagesScreen() {
                 <Text style={styles.modalTitle}>Yeni Mesaj</Text>
                 {!loadingUsers && allUsers.length > 0 && (
                   <Text style={styles.modalSubtitle}>
-                    {searchQuery 
-                      ? `${filteredUsers.length} kullanıcı bulundu` 
+                    {searchQuery
+                      ? `${filteredUsers.length} kullanıcı bulundu`
                       : `${allUsers.length} kullanıcı`}
                   </Text>
                 )}

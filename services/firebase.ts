@@ -6,7 +6,7 @@
  */
 
 import { initializeApp } from 'firebase/app';
-import { 
+import {
   getAuth,
   signInWithEmailAndPassword as firebaseSignIn,
   createUserWithEmailAndPassword as firebaseCreateUser,
@@ -15,8 +15,8 @@ import {
   User as FirebaseUser,
   Auth
 } from 'firebase/auth';
-import { 
-  getFirestore, 
+import {
+  getFirestore,
   collection as firestoreCollection,
   doc as firestoreDoc,
   getDoc,
@@ -34,7 +34,9 @@ import {
   QuerySnapshot,
   DocumentData
 } from 'firebase/firestore';
-import * as FileSystem from 'expo-file-system';
+// Firebase Storage imports removed - using base64 in Firestore instead (FREE)
+// Using legacy API for expo-file-system (SDK 54+)
+import * as FileSystem from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 
 // Firebase configuration from environment variables
@@ -42,7 +44,7 @@ import Constants from 'expo-constants';
 // DO NOT commit actual credentials to git
 const getFirebaseConfig = () => {
   const extra = Constants.expoConfig?.extra || {};
-  
+
   // Development fallback values (for local development only)
   const devFallback = {
     apiKey: 'AIzaSyB9zqqbVuCaPO3tL1uMhXcCPi-F7rJmcr0',
@@ -53,7 +55,7 @@ const getFirebaseConfig = () => {
     appId: '1:17357521540:web:c7168bf86db8697c5df8d1',
     measurementId: 'G-9W68V4VT5D',
   };
-  
+
   // Helper function to check if a value is a placeholder
   const isPlaceholder = (value: string | undefined): boolean => {
     if (!value) return true;
@@ -66,7 +68,7 @@ const getFirebaseConfig = () => {
     ];
     return placeholderPatterns.some(pattern => value.toLowerCase().includes(pattern));
   };
-  
+
   // Get from Constants.expoConfig.extra first (set in app.config.js)
   // Then fallback to process.env (for runtime access)
   // Finally use development fallback values if placeholder or missing
@@ -82,7 +84,7 @@ const getFirebaseConfig = () => {
     // Use fallback
     return fallback;
   };
-  
+
   const config = {
     apiKey: getValue(extra.firebaseApiKey, process.env.EXPO_PUBLIC_FIREBASE_API_KEY, devFallback.apiKey),
     authDomain: getValue(extra.firebaseAuthDomain, process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN, devFallback.authDomain),
@@ -92,19 +94,19 @@ const getFirebaseConfig = () => {
     appId: getValue(extra.firebaseAppId, process.env.EXPO_PUBLIC_FIREBASE_APP_ID, devFallback.appId),
     measurementId: getValue(extra.firebaseMeasurementId, process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID, devFallback.measurementId),
   };
-  
+
   // Debug: Log what we're getting (only in development)
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
     console.log('Firebase Config Debug:', {
       hasExtra: !!Constants.expoConfig?.extra,
       extraKeys: Object.keys(extra),
-      apiKeySource: extra.firebaseApiKey && !isPlaceholder(extra.firebaseApiKey) ? 'app.config.js' : 
-                    (process.env.EXPO_PUBLIC_FIREBASE_API_KEY && !isPlaceholder(process.env.EXPO_PUBLIC_FIREBASE_API_KEY) ? 'env' : 'fallback'),
+      apiKeySource: extra.firebaseApiKey && !isPlaceholder(extra.firebaseApiKey) ? 'app.config.js' :
+        (process.env.EXPO_PUBLIC_FIREBASE_API_KEY && !isPlaceholder(process.env.EXPO_PUBLIC_FIREBASE_API_KEY) ? 'env' : 'fallback'),
       apiKeyPreview: config.apiKey.substring(0, 15) + '...',
       projectId: config.projectId,
     });
   }
-  
+
   // Validate that required config is present
   if (!config.apiKey || !config.projectId) {
     console.error('Firebase: Missing required configuration!', {
@@ -118,7 +120,7 @@ const getFirebaseConfig = () => {
       projectId: config.projectId,
     });
   }
-  
+
   return config;
 };
 
@@ -169,7 +171,7 @@ export class FirebaseAuth {
 export class FirebaseFirestore {
   static async collection(collectionName: string) {
     const collectionRef = firestoreCollection(db, collectionName);
-    
+
     return {
       doc: (id: string) => {
         const docRef = firestoreDoc(collectionRef, id);
@@ -241,68 +243,76 @@ export class FirebaseFirestore {
 }
 
 // Image Service - Local URI Storage
-// Images are stored as local file URIs in Firestore (no Firebase Storage needed)
+// Image Service - Base64 Storage in Firestore (FREE - no Firebase Storage needed)
+// Images are converted to base64 and stored directly in Firestore documents
 export class FirebaseStorage {
   /**
-   * Return image URI directly (no Firebase Storage upload)
-   * Images are stored as local file URIs in Firestore
+   * Convert local image to base64 data URL for permanent storage in Firestore
+   * This is FREE and works across devices/app restarts
+   * 
+   * Note: Firestore document limit is 1MB, so images are compressed
    */
-  static async uploadImage(path: string, imageUri: string): Promise<string> {
+  static async uploadImage(_storagePath: string, imageUri: string): Promise<string> {
     try {
-      console.log('📤 FirebaseStorage.uploadImage: Starting upload...');
-      console.log('📤 FirebaseStorage.uploadImage: Path:', path);
+      console.log('📤 FirebaseStorage.uploadImage: Converting to base64...');
       console.log('📤 FirebaseStorage.uploadImage: Image URI:', imageUri);
-      console.log('📤 FirebaseStorage.uploadImage: URI type:', {
-        isFile: imageUri.startsWith('file://'),
-        isHttp: imageUri.startsWith('http://') || imageUri.startsWith('https://'),
-        isData: imageUri.startsWith('data:'),
-        length: imageUri.length,
-      });
-      
+
       // Check if user is authenticated
-      const auth = getAuth();
-      if (!auth.currentUser) {
+      const currentAuth = getAuth();
+      if (!currentAuth.currentUser) {
         console.error('❌ FirebaseStorage.uploadImage: User not authenticated');
         throw new Error('User must be authenticated to upload images');
       }
-      
-      console.log('✅ FirebaseStorage.uploadImage: User authenticated:', auth.currentUser.uid);
-      
-      // ⚠️ WARNING: Currently returning local URI directly instead of uploading to Firebase Storage
-      // This means the image will only work on the current device!
-      // TODO: Implement actual Firebase Storage upload
-      console.warn('⚠️ FirebaseStorage.uploadImage: WARNING - Returning local URI instead of uploading to Firebase Storage!');
-      console.warn('⚠️ FirebaseStorage.uploadImage: This image will only work on the current device.');
-      console.warn('⚠️ FirebaseStorage.uploadImage: Local URI:', imageUri);
-      
-      // Return the local URI directly (same as users table)
-      // This works because React Native Image component can handle file:// URIs
-      // BUT: This won't work across devices or after app reinstall!
-      const returnedUri = imageUri;
-      console.log('📤 FirebaseStorage.uploadImage: Returning local URI:', returnedUri);
-      return returnedUri;
+
+      // If it's already a data URL (base64), return it directly
+      if (imageUri.startsWith('data:image')) {
+        console.log('📤 FirebaseStorage.uploadImage: Already a data URL, returning as-is');
+        return imageUri;
+      }
+
+      // If it's already a permanent URL (http/https), return it
+      if (imageUri.startsWith('http://') || imageUri.startsWith('https://')) {
+        console.log('📤 FirebaseStorage.uploadImage: Already a web URL, returning as-is');
+        return imageUri;
+      }
+
+      // Read local file as base64
+      if (imageUri.startsWith('file://') || imageUri.startsWith('/')) {
+        console.log('📤 FirebaseStorage.uploadImage: Reading local file as base64...');
+        const fileInfo = await FileSystem.getInfoAsync(imageUri);
+        if (!fileInfo.exists) {
+          throw new Error('File does not exist: ' + imageUri);
+        }
+
+        const base64Data = await FileSystem.readAsStringAsync(imageUri, {
+          encoding: 'base64',
+        });
+
+        // Create data URL - this is permanent and works everywhere
+        const dataUrl = `data:image/jpeg;base64,${base64Data}`;
+        console.log('✅ FirebaseStorage.uploadImage: Base64 conversion complete, length:', dataUrl.length);
+
+        // Warn if image is too large (Firestore limit is 1MB per document)
+        if (dataUrl.length > 900000) {
+          console.warn('⚠️ FirebaseStorage.uploadImage: Image is large, may affect performance');
+        }
+
+        return dataUrl;
+      }
+
+      throw new Error('Unsupported image URI format: ' + imageUri.substring(0, 50));
     } catch (error) {
-      console.error('❌ FirebaseStorage.uploadImage: Upload error:', error);
-      console.error('❌ FirebaseStorage.uploadImage: Error details:', {
-        error: error,
-        errorType: typeof error,
-        errorMessage: error instanceof Error ? error.message : 'unknown',
-      });
+      console.error('❌ FirebaseStorage.uploadImage: Conversion error:', error);
       throw error;
     }
   }
 
   /**
-   * Delete image (no-op for local URIs)
+   * Delete image - no-op for base64 (data is in Firestore document)
    */
-  static async deleteImage(imagePath: string): Promise<void> {
-    try {
-      // Local URIs are managed by the device, no deletion needed
-      console.log('ImageService: Local URI deletion not needed');
-    } catch (error) {
-      console.error('ImageService - Delete error:', error);
-      throw error;
-    }
+  static async deleteImage(_imagePath: string): Promise<void> {
+    // Base64 images are stored in Firestore documents, no separate deletion needed
+    console.log('FirebaseStorage.deleteImage: No-op for base64 images');
   }
 }
 
@@ -312,18 +322,18 @@ export class UserProfileService {
     try {
       console.log('UserProfileService: Updating profile for user:', userId);
       console.log('UserProfileService: Profile data:', profileData);
-      
+
       const userRef = firestoreDoc(db, 'users', userId);
       const dataToSave = {
         ...profileData,
         updatedAt: new Date().toISOString(),
       };
-      
+
       console.log('UserProfileService: Data to save:', dataToSave);
       console.log('UserProfileService: Firestore reference:', userRef.path);
-      
+
       await setDoc(userRef, dataToSave, { merge: true });
-      
+
       console.log('UserProfileService: Profile updated successfully in Firestore');
       return true;
     } catch (error) {
@@ -342,10 +352,10 @@ export class UserProfileService {
       console.log('🔍 UserProfileService.getUserProfile: Starting for userId:', userId);
       const userRef = firestoreDoc(db, 'users', userId);
       console.log('🔍 UserProfileService.getUserProfile: Firestore path:', userRef.path);
-      
+
       const userSnap = await getDoc(userRef);
       console.log('🔍 UserProfileService.getUserProfile: Document exists:', userSnap.exists());
-      
+
       if (userSnap.exists()) {
         const data = userSnap.data();
         console.log('🔍 UserProfileService.getUserProfile: Raw Firestore data:', JSON.stringify(data, null, 2));
@@ -389,7 +399,7 @@ export class UserProfileService {
   static async createProfilesCollection() {
     try {
       console.log('Creating profiles collection...');
-      
+
       // Create a sample profile document
       const sampleProfileRef = firestoreDoc(db, 'profiles', 'sample-profile');
       await setDoc(sampleProfileRef, {
@@ -401,7 +411,7 @@ export class UserProfileService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-      
+
       console.log('Profiles collection created successfully');
       return true;
     } catch (error) {
@@ -416,21 +426,21 @@ export class PetService {
   static async addPet(petData: any): Promise<string> {
     try {
       console.log('PetService: Adding pet:', petData);
-      
+
       // Validate photos array - must be non-empty and all URLs must be valid
       if (!petData.photos || !Array.isArray(petData.photos) || petData.photos.length === 0) {
         throw new Error('Pet must have at least one photo');
       }
-      
+
       // Ensure all photos are valid URLs
-      const validPhotos = petData.photos.filter((photo: string) => 
+      const validPhotos = petData.photos.filter((photo: string) =>
         photo && typeof photo === 'string' && photo.trim().length > 0
       );
-      
+
       if (validPhotos.length === 0) {
         throw new Error('No valid photo URLs found. All photos must be provided.');
       }
-      
+
       const petsCollection = firestoreCollection(db, 'pets');
       const dataToSave = {
         ...petData,
@@ -438,9 +448,9 @@ export class PetService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      
+
       console.log('PetService: Saving pet with photos:', validPhotos.length, 'URLs');
-      
+
       const docRef = await addDoc(petsCollection, dataToSave);
       console.log('PetService: Pet added with ID:', docRef.id);
       console.log('PetService: Photos saved (URLs):', validPhotos.length);
@@ -455,13 +465,13 @@ export class PetService {
     try {
       const petRef = firestoreDoc(db, 'pets', petId);
       const petSnap = await getDoc(petRef);
-      
+
       if (petSnap.exists()) {
         const data = petSnap.data();
-        
+
         // Ensure photos is always an array
         let photos = Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []);
-        
+
         const pet = {
           id: petSnap.id,
           ...data,
@@ -471,14 +481,14 @@ export class PetService {
           createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
           updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
         };
-        
+
         console.log('PetService: getPet data:', {
           id: pet.id,
           name: (pet as any).name,
           photosCount: pet.photos?.length || 0,
           photos: pet.photos,
         });
-        
+
         return pet;
       }
       return null;
@@ -492,20 +502,20 @@ export class PetService {
     try {
       console.log('PetService: Getting pets for user:', userId);
       const petsCollection = firestoreCollection(db, 'pets');
-      
+
       // Index gerektirmemek için sadece where kullan, orderBy'ı client-side'da yap
       // ÖNEMLİ: orderBy kullanmıyoruz çünkü composite index gerektirir
       const q = query(petsCollection, where('ownerId', '==', userId));
       const snapshot = await getDocs(q);
-      
+
       console.log(`PetService: Found ${snapshot.docs.length} pets for user`);
-      
+
       const pets = snapshot.docs.map(doc => {
         const data = doc.data();
-        
+
         // Ensure photos is always an array
         let photos = Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []);
-        
+
         const pet = {
           id: doc.id,
           ...data,
@@ -515,7 +525,7 @@ export class PetService {
           createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt) : new Date(),
           updatedAt: data.updatedAt ? (typeof data.updatedAt === 'string' ? new Date(data.updatedAt) : data.updatedAt) : new Date(),
         };
-        
+
         // Debug: Log photos for first pet
         if (snapshot.docs.indexOf(doc) === 0) {
           console.log('PetService: Sample user pet data:', {
@@ -525,10 +535,10 @@ export class PetService {
             photos: pet.photos,
           });
         }
-        
+
         return pet;
       });
-      
+
       // Client-side'da tarihe göre sırala (en yeni önce)
       // Bu index gerektirmez çünkü Firestore query'si değil, JavaScript sort
       const sortedPets = pets.sort((a, b) => {
@@ -536,12 +546,12 @@ export class PetService {
         const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
         return dateB.getTime() - dateA.getTime();
       });
-      
+
       console.log(`PetService: Returning ${sortedPets.length} sorted pets`);
       return sortedPets;
     } catch (error: any) {
       console.error('PetService: Error getting user pets:', error);
-      
+
       // Index hatası ise, kullanıcıya bilgi ver
       if (error?.code === 'failed-precondition' || error?.message?.includes('index')) {
         console.warn('PetService: Index required. Falling back to getAllPets and filtering client-side.');
@@ -559,7 +569,7 @@ export class PetService {
           throw error; // Orijinal hatayı fırlat
         }
       }
-      
+
       throw error;
     }
   }
@@ -568,19 +578,19 @@ export class PetService {
     try {
       const petsCollection = firestoreCollection(db, 'pets');
       let q = query(petsCollection, orderBy('createdAt', 'desc'));
-      
+
       if (limitCount) {
         q = query(q, limit(limitCount));
       }
-      
+
       const snapshot = await getDocs(q);
-      
+
       return snapshot.docs.map(doc => {
         const data = doc.data();
-        
+
         // Ensure photos is always an array
         let photos = Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []);
-        
+
         const pet = {
           id: doc.id,
           ...data,
@@ -590,7 +600,7 @@ export class PetService {
           createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
           updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
         };
-        
+
         // Debug: Log photos for first pet
         if (snapshot.docs.indexOf(doc) === 0) {
           console.log('PetService: Sample pet data:', {
@@ -600,7 +610,7 @@ export class PetService {
             photos: pet.photos,
           });
         }
-        
+
         return pet;
       });
     } catch (error) {
@@ -615,13 +625,13 @@ export class PetService {
       // Index gerektirmemek için sadece where kullan, orderBy'ı client-side'da yap
       const q = query(petsCollection, where('species', '==', species));
       const snapshot = await getDocs(q);
-      
+
       const pets = snapshot.docs.map(doc => {
         const data = doc.data();
-        
+
         // Ensure photos is always an array
         let photos = Array.isArray(data.photos) ? data.photos : (data.photos ? [data.photos] : []);
-        
+
         const pet = {
           id: doc.id,
           ...data,
@@ -631,7 +641,7 @@ export class PetService {
           createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
           updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
         };
-        
+
         // Debug: Log photos for first pet
         if (snapshot.docs.indexOf(doc) === 0) {
           console.log('PetService: Sample species pet data:', {
@@ -641,10 +651,10 @@ export class PetService {
             photos: pet.photos,
           });
         }
-        
+
         return pet;
       });
-      
+
       // Client-side'da tarihe göre sırala (en yeni önce)
       return pets.sort((a, b) => {
         const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
@@ -661,9 +671,9 @@ export class PetService {
     try {
       console.log('PetService: Updating pet with ID:', petId);
       console.log('PetService: Updates data:', updates);
-      
+
       const petRef = firestoreDoc(db, 'pets', petId);
-      
+
       // Remove undefined values to avoid Firestore errors
       const cleanUpdates: any = {};
       Object.keys(updates).forEach(key => {
@@ -671,33 +681,33 @@ export class PetService {
           cleanUpdates[key] = updates[key];
         }
       });
-      
+
       // Validate photos if they're being updated
       if (cleanUpdates.photos) {
         if (!Array.isArray(cleanUpdates.photos) || cleanUpdates.photos.length === 0) {
           throw new Error('Pet must have at least one photo');
         }
-        
+
         // Ensure all photos are valid URLs
-        const validPhotos = cleanUpdates.photos.filter((photo: string) => 
+        const validPhotos = cleanUpdates.photos.filter((photo: string) =>
           photo && typeof photo === 'string' && photo.trim().length > 0
         );
-        
+
         if (validPhotos.length === 0) {
           throw new Error('No valid photo URLs found. All photos must be provided.');
         }
-        
+
         cleanUpdates.photos = validPhotos;
         console.log('PetService: Validated photos:', validPhotos.length, 'URLs');
       }
-      
+
       cleanUpdates.updatedAt = new Date().toISOString();
-      
+
       console.log('PetService: Clean updates to save:', cleanUpdates);
       console.log('PetService: Firestore reference path:', petRef.path);
-      
+
       await updateDoc(petRef, cleanUpdates);
-      
+
       console.log('PetService: Pet updated successfully');
     } catch (error) {
       console.error('PetService: Error updating pet:', error);
@@ -727,25 +737,25 @@ export class MessageService {
   static async getOrCreateThread(userId1: string, userId2: string): Promise<string> {
     try {
       console.log('MessageService: getOrCreateThread called for users:', userId1, userId2);
-      
+
       // Create a consistent chat ID (sorted to ensure uniqueness)
       const participants = [userId1, userId2].sort();
       const chatId = `${participants[0]}_${participants[1]}`;
-      
+
       console.log('MessageService: Generated chatId:', chatId);
-      
+
       const chatRef = firestoreDoc(db, 'chats', chatId);
       const chatSnap = await getDoc(chatRef);
-      
+
       if (!chatSnap.exists()) {
         console.log('MessageService: Chat does not exist, creating new chat...');
-        
+
         // Get user info for both users
         const [user1, user2] = await Promise.all([
           UserService.getUserById(userId1),
           UserService.getUserById(userId2),
         ]);
-        
+
         // Create new chat with user information
         await setDoc(chatRef, {
           participants: participants,
@@ -760,11 +770,11 @@ export class MessageService {
           lastMessage: null,
           lastMessageAt: null,
         });
-        
+
         console.log('MessageService: ✅ Created new chat:', chatId);
       } else {
         console.log('MessageService: ✅ Chat already exists, returning existing chat:', chatId);
-        
+
         // Update user info if it's missing (for existing chats)
         const chatData = chatSnap.data();
         if (!chatData.user1Name || !chatData.user2Name) {
@@ -773,7 +783,7 @@ export class MessageService {
             UserService.getUserById(userId1),
             UserService.getUserById(userId2),
           ]);
-          
+
           await updateDoc(chatRef, {
             user1Name: (user1 as any)?.displayName || (user1 as any)?.email || 'Kullanıcı',
             user1Photo: (user1 as any)?.photoURL || '',
@@ -784,7 +794,7 @@ export class MessageService {
           console.log('MessageService: User info updated in existing chat');
         }
       }
-      
+
       console.log('MessageService: Returning chatId:', chatId);
       return chatId;
     } catch (error) {
@@ -804,9 +814,9 @@ export class MessageService {
         readBy: [senderId], // Sender has read their own message
         createdAt: new Date().toISOString(),
       };
-      
+
       const docRef = await addDoc(messagesCollection, messageData);
-      
+
       // Update chat with last message
       const chatRef = firestoreDoc(db, 'chats', threadId);
       await updateDoc(chatRef, {
@@ -814,7 +824,7 @@ export class MessageService {
         lastMessageAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-      
+
       return docRef.id;
     } catch (error) {
       console.error('MessageService: Error sending message:', error);
@@ -832,9 +842,9 @@ export class MessageService {
         messagesCollection,
         where('threadId', '==', threadId)
       );
-      
+
       const snapshot = await getDocs(q);
-      
+
       const messages = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -843,14 +853,14 @@ export class MessageService {
           createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(),
         };
       });
-      
+
       // Sort by createdAt (client-side sorting)
       messages.sort((a, b) => {
         const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
         const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
         return dateA.getTime() - dateB.getTime();
       });
-      
+
       return messages;
     } catch (error: any) {
       console.error('MessageService: Error getting messages:', error);
@@ -868,9 +878,9 @@ export class MessageService {
         where('participants', 'array-contains', userId)
       );
       const snapshot = await getDocs(q);
-      
+
       console.log(`MessageService: Found ${snapshot.docs.length} chats`);
-      
+
       const chats = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -888,14 +898,14 @@ export class MessageService {
           lastMessageAt: data.lastMessageAt ? new Date(data.lastMessageAt) : null,
         };
       });
-      
+
       // Sort by lastMessageAt (most recent first)
       const sortedChats = chats.sort((a, b) => {
         const dateA = a.lastMessageAt || a.createdAt;
         const dateB = b.lastMessageAt || b.createdAt;
         return dateB.getTime() - dateA.getTime();
       });
-      
+
       console.log(`MessageService: Returning ${sortedChats.length} sorted chats`);
       return sortedChats;
     } catch (error) {
@@ -910,12 +920,12 @@ export class MessageService {
       console.log('MessageService: Getting chat by ID:', chatId);
       const chatRef = firestoreDoc(db, 'chats', chatId);
       const chatSnap = await getDoc(chatRef);
-      
+
       if (!chatSnap.exists()) {
         console.warn('MessageService: Chat not found:', chatId);
         return null;
       }
-      
+
       const data = chatSnap.data();
       return {
         id: chatSnap.id,
@@ -947,7 +957,7 @@ export class MessageService {
         where('threadId', '==', threadId)
       );
       const snapshot = await getDocs(q);
-      
+
       // Update messages that are NOT read by this user
       const updatePromises = snapshot.docs
         .filter(doc => {
@@ -962,7 +972,7 @@ export class MessageService {
             readBy: [...readBy, userId],
           });
         });
-      
+
       await Promise.all(updatePromises);
     } catch (error) {
       console.error('MessageService: Error marking as read:', error);
@@ -976,14 +986,14 @@ export class MessageService {
     callback: (messages: any[]) => void
   ) {
     const messagesCollection = firestoreCollection(db, 'messages');
-    
+
     // Use query without orderBy to avoid index requirement
     // We'll sort client-side instead
     const q = query(
       messagesCollection,
       where('threadId', '==', threadId)
     );
-    
+
     return onSnapshot(
       q,
       (snapshot) => {
@@ -996,14 +1006,14 @@ export class MessageService {
             createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(),
           };
         });
-        
+
         // Sort by createdAt (client-side sorting)
         messages.sort((a, b) => {
           const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
           const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
           return dateA.getTime() - dateB.getTime();
         });
-        
+
         console.log('MessageService: Calling callback with', messages.length, 'messages');
         callback(messages);
       },
@@ -1023,9 +1033,9 @@ export class UserService {
       console.log('UserService: Fetching all users from Firestore...');
       const usersCollection = firestoreCollection(db, 'users');
       const snapshot = await getDocs(usersCollection);
-      
+
       console.log(`UserService: Found ${snapshot.docs.length} users in Firestore`);
-      
+
       let users: any[] = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -1040,20 +1050,20 @@ export class UserService {
           updatedAt: data.updatedAt ? (typeof data.updatedAt === 'string' ? new Date(data.updatedAt) : data.updatedAt) : new Date(),
         };
       });
-      
+
       // Exclude current user if provided
       if (excludeUserId) {
         users = users.filter(user => user.id !== excludeUserId);
         console.log(`UserService: Excluded current user, ${users.length} users remaining`);
       }
-      
+
       // Sort by displayName or email
       const sortedUsers = users.sort((a, b) => {
         const nameA = (a.displayName || a.email || '').toLowerCase();
         const nameB = (b.displayName || b.email || '').toLowerCase();
         return nameA.localeCompare(nameB);
       });
-      
+
       console.log(`UserService: Returning ${sortedUsers.length} users`);
       return sortedUsers;
     } catch (error) {
@@ -1066,7 +1076,7 @@ export class UserService {
     try {
       const userRef = firestoreDoc(db, 'users', userId);
       const userSnap = await getDoc(userRef);
-      
+
       if (userSnap.exists()) {
         const data = userSnap.data();
         return {
@@ -1088,7 +1098,7 @@ export class UserService {
     try {
       const userRef = firestoreDoc(db, 'users', userId);
       const userSnap = await getDoc(userRef);
-      
+
       if (!userSnap.exists()) {
         console.log('UserService: User not found in Firestore, creating...');
         await setDoc(userRef, {
@@ -1115,9 +1125,9 @@ export class MapSpotService {
       const spotsCollection = firestoreCollection(db, 'mapSpots');
       const q = query(spotsCollection, where('creatorId', '==', userId));
       const snapshot = await getDocs(q);
-      
+
       console.log(`MapSpotService: Found ${snapshot.docs.length} map spots for user`);
-      
+
       const spots = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -1127,7 +1137,7 @@ export class MapSpotService {
           lastUpdatedAt: data.lastUpdatedAt ? (typeof data.lastUpdatedAt === 'string' ? new Date(data.lastUpdatedAt) : data.lastUpdatedAt.toDate ? data.lastUpdatedAt.toDate() : new Date(data.lastUpdatedAt)) : new Date(),
         };
       });
-      
+
       return spots;
     } catch (error) {
       console.error('MapSpotService: Error getting user map spots:', error);
@@ -1152,9 +1162,9 @@ export class MapSpotService {
       const spotsCollection = firestoreCollection(db, 'mapSpots');
       const q = query(spotsCollection, orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      
+
       console.log(`MapSpotService: Found ${snapshot.docs.length} total map spots`);
-      
+
       const spots = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -1165,7 +1175,7 @@ export class MapSpotService {
           lastUpdatedAt: data.lastUpdatedAt ? (typeof data.lastUpdatedAt === 'string' ? new Date(data.lastUpdatedAt) : data.lastUpdatedAt.toDate ? data.lastUpdatedAt.toDate() : new Date(data.lastUpdatedAt)) : new Date(),
         };
       });
-      
+
       return spots;
     } catch (error) {
       console.error('MapSpotService: Error getting all map spots:', error);
@@ -1181,7 +1191,7 @@ export class MapSpotService {
       console.log('MapSpotService: Subscribing to map spots');
       const spotsCollection = firestoreCollection(db, 'mapSpots');
       const q = query(spotsCollection, orderBy('createdAt', 'desc'));
-      
+
       return onSnapshot(
         q,
         (snapshot) => {
@@ -1206,7 +1216,7 @@ export class MapSpotService {
     } catch (error) {
       console.error('MapSpotService: Error setting up subscription:', error);
       if (onError) onError(error as Error);
-      return () => {}; // Return empty unsubscribe function
+      return () => { }; // Return empty unsubscribe function
     }
   }
 
@@ -1221,7 +1231,7 @@ export class MapSpotService {
     try {
       console.log('MapSpotService: Creating map spot:', spotData);
       const spotsCollection = firestoreCollection(db, 'mapSpots');
-      
+
       const newSpot = {
         creatorId: spotData.creatorId,
         type: spotData.type,
@@ -1233,10 +1243,10 @@ export class MapSpotService {
         createdAt: new Date(),
         lastUpdatedAt: new Date(),
       };
-      
+
       const docRef = await addDoc(spotsCollection, newSpot);
       console.log('MapSpotService: Map spot created with ID:', docRef.id);
-      
+
       return {
         id: docRef.id,
         ...newSpot,
@@ -1252,17 +1262,17 @@ export class MapSpotService {
       console.log('MapSpotService: Contributing to spot:', spotId);
       const spotRef = firestoreDoc(db, 'mapSpots', spotId);
       const spotDoc = await getDoc(spotRef);
-      
+
       if (!spotDoc.exists()) {
         throw new Error('Map spot not found');
       }
-      
+
       const currentCount = spotDoc.data()?.contributorsCount || 0;
       await updateDoc(spotRef, {
         contributorsCount: currentCount + 1,
         lastUpdatedAt: new Date(),
       });
-      
+
       console.log('MapSpotService: Contribution added to spot:', spotId);
       return true;
     } catch (error) {

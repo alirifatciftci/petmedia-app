@@ -27,6 +27,15 @@ interface ChatUserInfo {
   photo: string;
 }
 
+// Fotoğraf URL'sinin geçerli ve kalıcı olup olmadığını kontrol et
+const isValidPhotoURL = (url: string | null | undefined): boolean => {
+  if (!url || url.trim() === '') return false;
+  // file:// URL'leri geçici - uygulama kapanınca kaybolur
+  if (url.startsWith('file://')) return false;
+  // data:image (base64) veya http/https URL'leri geçerli
+  return url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://');
+};
+
 export default function ChatScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -60,15 +69,15 @@ export default function ChatScreen() {
     const initializeChat = async () => {
       try {
         setLoading(true);
-        
+
         // If chatId is provided, use it directly; otherwise get or create thread
         let newThreadId: string;
         let otherUser: ChatUserInfo;
-        
+
         if (chatIdParam) {
           console.log('ChatScreen: Using provided chatId:', chatIdParam);
           newThreadId = chatIdParam;
-          
+
           // If we have chatId but no otherUserId, get chat info
           if (!otherUserIdParam) {
             const chatData = await MessageService.getChatById(chatIdParam);
@@ -98,7 +107,7 @@ export default function ChatScreen() {
           console.log('ChatScreen: Getting or creating thread for users:', user.id, otherUserIdParam);
           newThreadId = await MessageService.getOrCreateThread(user.id, otherUserIdParam);
           console.log('ChatScreen: Thread ID:', newThreadId);
-          
+
           otherUser = {
             id: otherUserIdParam,
             name: otherUserNameParam,
@@ -110,7 +119,7 @@ export default function ChatScreen() {
           setLoading(false);
           return;
         }
-        
+
         setThreadId(newThreadId);
 
         // Load existing messages
@@ -166,7 +175,7 @@ export default function ChatScreen() {
       console.log('ChatScreen: Sending message:', text);
       const messageId = await MessageService.sendMessage(threadId, user.id, text);
       console.log('ChatScreen: Message sent successfully, ID:', messageId);
-      
+
       // Real-time subscription will update the messages automatically
       // But we can also manually refresh to ensure it appears
       setTimeout(() => {
@@ -199,8 +208,8 @@ export default function ChatScreen() {
 
   const renderMessage = ({ item }: { item: any }) => {
     const isMyMessage = item.senderId === user?.id;
-    const messageDate = item.createdAt instanceof Date 
-      ? item.createdAt 
+    const messageDate = item.createdAt instanceof Date
+      ? item.createdAt
       : new Date(item.createdAt);
 
     return (
@@ -210,6 +219,18 @@ export default function ChatScreen() {
           isMyMessage ? styles.myMessageContainer : styles.otherMessageContainer,
         ]}
       >
+        {/* Karşı tarafın mesajlarında profil fotoğrafı göster */}
+        {!isMyMessage && (
+          isValidPhotoURL(otherUserInfo?.photo) ? (
+            <Image source={{ uri: otherUserInfo!.photo }} style={styles.messageAvatar} />
+          ) : (
+            <View style={styles.messageAvatarPlaceholder}>
+              <Text style={styles.messageAvatarText}>
+                {otherUserInfo?.name?.charAt(0).toUpperCase() || '?'}
+              </Text>
+            </View>
+          )
+        )}
         <View
           style={[
             styles.messageBubble,
@@ -253,7 +274,7 @@ export default function ChatScreen() {
             onPress={() => setShowUserProfile(true)}
             activeOpacity={0.7}
           >
-            {otherUserInfo && (otherUserInfo.photo && otherUserInfo.photo.trim() !== '' ? (
+            {otherUserInfo && (isValidPhotoURL(otherUserInfo.photo) ? (
               <Image source={{ uri: otherUserInfo.photo }} style={styles.headerAvatar} />
             ) : (
               <View style={styles.headerAvatarPlaceholder}>
@@ -268,7 +289,7 @@ export default function ChatScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary[500]} />
         </View>
-        
+
         {/* User Profile Modal */}
         {otherUserInfo && (
           <UserProfileModal
@@ -286,7 +307,7 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
-      
+
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -299,7 +320,7 @@ export default function ChatScreen() {
           onPress={() => setShowUserProfile(true)}
           activeOpacity={0.7}
         >
-          {otherUserInfo && (otherUserInfo.photo && otherUserInfo.photo.trim() !== '' ? (
+          {otherUserInfo && (isValidPhotoURL(otherUserInfo.photo) ? (
             <Image source={{ uri: otherUserInfo.photo }} style={styles.headerAvatar} />
           ) : (
             <View style={styles.headerAvatarPlaceholder}>
@@ -438,7 +459,28 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   otherMessageContainer: {
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  messageAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: theme.spacing.xs,
+  },
+  messageAvatarPlaceholder: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primary[200],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing.xs,
+  },
+  messageAvatarText: {
+    fontSize: theme.typography.fontSize.xs,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    color: theme.colors.primary[700],
   },
   messageBubble: {
     maxWidth: '75%',

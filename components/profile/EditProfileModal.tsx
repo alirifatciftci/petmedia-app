@@ -76,9 +76,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
         bio: formData.bio.trim(),
         photoURL: profileImage,
       });
-      
+
       console.log('✅ EditProfileModal: Profile saved to Firestore successfully');
-      
+
       const updatedUser = {
         ...user!,
         displayName: formData.displayName.trim(),
@@ -87,7 +87,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
         photoURL: profileImage,
         updatedAt: new Date().toISOString(),
       };
-      
+
       setUser(updatedUser);
       Alert.alert('Başarılı', 'Profil bilgileriniz güncellendi ve Firestore\'a kaydedildi!');
       onClose();
@@ -102,12 +102,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
   const handleTestSave = async () => {
     console.log('Test save triggered');
     Alert.alert('Test', 'Firestore bağlantı testi başlatılıyor...');
-    
+
     try {
       // Önce Firestore bağlantısını test et
       await UserProfileService.testFirestoreConnection();
       Alert.alert('Başarılı', 'Firestore bağlantısı çalışıyor! Şimdi profil kaydediliyor...');
-      
+
       // Sonra profil kaydet
       await handleSave();
     } catch (error) {
@@ -119,12 +119,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
   const handleStorageTest = async () => {
     console.log('Storage test triggered');
     Alert.alert('Test', 'Firebase Storage bağlantı testi başlatılıyor...');
-    
+
     try {
       // Test image upload
       const testImageUri = 'https://via.placeholder.com/150x150.jpg';
       const testPath = `test/connection_${Date.now()}.jpg`;
-      
+
       const downloadURL = await FirebaseStorage.uploadImage(testPath, testImageUri);
       Alert.alert('Başarılı', `Storage çalışıyor! URL: ${downloadURL.substring(0, 50)}...`);
     } catch (error) {
@@ -136,7 +136,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
   const handleCreateCollection = async () => {
     console.log('Create collection triggered');
     Alert.alert('Koleksiyon', 'Profiles koleksiyonu oluşturuluyor...');
-    
+
     try {
       await UserProfileService.createProfilesCollection();
       Alert.alert('Başarılı', 'Profiles koleksiyonu oluşturuldu! Firebase Console\'da kontrol edin.');
@@ -149,11 +149,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
   const handlePhotoUpload = async () => {
     try {
       console.log('Photo upload started');
-      
+
       // İzin iste
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       console.log('Permission result:', permissionResult);
-      
+
       if (permissionResult.granted === false) {
         Alert.alert('Hata', 'Galeri erişim izni gerekli');
         return;
@@ -167,22 +167,22 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
         aspect: [1, 1],
         quality: 0.8,
       });
-      
+
       console.log('Image picker result:', result);
 
       if (!result.canceled && result.assets[0]) {
         console.log('Image selected:', result.assets[0].uri);
         setIsUploadingPhoto(true);
         setImageError(false);
-        
+
         try {
           console.log('📤 EditProfileModal: Starting image upload to Firebase Storage...');
           console.log('📤 EditProfileModal: Local image URI:', result.assets[0].uri);
-          
+
           // Firebase Storage'a yükle
           const imagePath = `profiles/${user!.id}/profile_${Date.now()}.jpg`;
           console.log('📤 EditProfileModal: Storage path:', imagePath);
-          
+
           const downloadURL = await FirebaseStorage.uploadImage(imagePath, result.assets[0].uri);
           console.log('✅ EditProfileModal: Image uploaded successfully, downloadURL:', downloadURL);
           console.log('✅ EditProfileModal: downloadURL details:', {
@@ -191,25 +191,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
             isHttp: downloadURL.startsWith('http://') || downloadURL.startsWith('https://'),
             isFile: downloadURL.startsWith('file://'),
           });
-          
+
           setProfileImage(downloadURL);
           setImageError(false);
           Alert.alert('Başarılı', 'Profil fotoğrafı yüklendi');
         } catch (storageError) {
-          console.error('❌ EditProfileModal: Storage upload failed:', storageError);
-          console.error('❌ EditProfileModal: Error details:', {
-            error: storageError,
-            errorType: typeof storageError,
-            errorMessage: storageError instanceof Error ? storageError.message : 'unknown',
-          });
-          // Geçici çözüm: Local URI kullan
-          console.warn('⚠️ EditProfileModal: Using local URI as fallback:', result.assets[0].uri);
-          setProfileImage(result.assets[0].uri);
-          setImageError(false);
-          Alert.alert(
-            'Firebase Storage Gerekli', 
-            'Firebase Console\'da Storage\'ı etkinleştirin:\n1. Firebase Console > Storage\n2. "Get started" butonuna tıklayın\n3. Güvenlik kurallarını ayarlayın'
-          );
+          console.error('❌ EditProfileModal: Image conversion failed:', storageError);
+          const errorMessage = storageError instanceof Error ? storageError.message : 'Bilinmeyen hata';
+          Alert.alert('Hata', `Fotoğraf işlenemedi: ${errorMessage}`);
         }
       }
     } catch (error) {
@@ -232,8 +221,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
             <X size={24} color={theme.colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>Profil Düzenle</Text>
-          <TouchableOpacity 
-            onPress={handleSave} 
+          <TouchableOpacity
+            onPress={handleSave}
             style={styles.saveButton}
             disabled={isLoading}
           >
@@ -243,24 +232,24 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
               <Text style={styles.saveText}>Kaydet</Text>
             )}
           </TouchableOpacity>
-          
+
           {/* Test Buttons */}
-          <TouchableOpacity 
-            onPress={handleTestSave} 
+          <TouchableOpacity
+            onPress={handleTestSave}
             style={styles.testButton}
           >
             <Text style={styles.testText}>TEST: Firestore'a Kaydet</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            onPress={handleStorageTest} 
+
+          <TouchableOpacity
+            onPress={handleStorageTest}
             style={[styles.testButton, { backgroundColor: 'purple' }]}
           >
             <Text style={styles.testText}>TEST: Storage Bağlantısı</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            onPress={handleCreateCollection} 
+
+          <TouchableOpacity
+            onPress={handleCreateCollection}
             style={[styles.testButton, { backgroundColor: 'green' }]}
           >
             <Text style={styles.testText}>Koleksiyon Oluştur</Text>
@@ -272,8 +261,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
           <View style={styles.photoSection}>
             <View style={styles.photoContainer}>
               {profileImage && !imageError ? (
-                <Image 
-                  source={{ uri: profileImage }} 
+                <Image
+                  source={{ uri: profileImage }}
                   style={styles.profileImage}
                   onError={() => {
                     // Silently handle image load errors - show placeholder instead
@@ -285,8 +274,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, onC
                 <User size={60} color={theme.colors.primary[500]} />
               )}
             </View>
-            <TouchableOpacity 
-              style={[styles.photoButton, isUploadingPhoto && styles.photoButtonDisabled]} 
+            <TouchableOpacity
+              style={[styles.photoButton, isUploadingPhoto && styles.photoButtonDisabled]}
               onPress={handlePhotoUpload}
               disabled={isUploadingPhoto}
             >
