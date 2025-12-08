@@ -18,6 +18,13 @@ import { UserService, PetService } from '../../services/firebase';
 import { PetCard } from '../common/PetCard';
 import { Pet } from '../../types';
 
+// Fotoğraf URL'sinin geçerli ve kalıcı olup olmadığını kontrol et
+const isValidPhotoURL = (url: string | null | undefined): boolean => {
+  if (!url || url.trim() === '') return false;
+  if (url.startsWith('file://')) return false;
+  return url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://');
+};
+
 interface UserProfileModalProps {
   visible: boolean;
   onClose: () => void;
@@ -50,7 +57,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     try {
       setLoading(true);
       const userData = await UserService.getUserById(userId);
-      
+
       if (userData) {
         setUser(userData);
         // Load user's pets
@@ -135,48 +142,45 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 <ActivityIndicator size="large" color={theme.colors.primary[500]} />
               </View>
             ) : (
-              <ScrollView 
+              <ScrollView
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
               >
                 {/* Profile Header */}
                 <View style={styles.profileHeader}>
-                  {photoURL && photoURL.trim() !== '' && !imageError ? (
-                    <Image 
-                      source={{ uri: photoURL }} 
+                  {isValidPhotoURL(photoURL) && !imageError ? (
+                    <Image
+                      source={{ uri: photoURL }}
                       style={styles.profileAvatar}
-                      onError={() => {
-                        // Silently handle image load errors - show placeholder instead
-                        setImageError(true);
-                      }}
+                      onError={() => setImageError(true)}
                       onLoadStart={() => setImageError(false)}
                     />
                   ) : (
                     <LinearGradient
-                      colors={[theme.colors.primary[500], theme.colors.primary[600]]}
+                      colors={[theme.colors.primary[400], theme.colors.primary[500]]}
                       style={styles.avatarPlaceholder}
                     >
                       <Text style={styles.avatarText}>{initials}</Text>
                     </LinearGradient>
                   )}
-                  
+
                   <Text style={styles.displayName}>{displayName}</Text>
-                  
+
                   {email && (
                     <View style={styles.infoRow}>
                       <Mail size={16} color={theme.colors.text.secondary} />
                       <Text style={styles.infoText}>{email}</Text>
                     </View>
                   )}
-                  
+
                   {city && (
                     <View style={styles.infoRow}>
                       <MapPin size={16} color={theme.colors.text.secondary} />
                       <Text style={styles.infoText}>{city}</Text>
                     </View>
                   )}
-                  
+
                   {bio && (
                     <View style={styles.bioContainer}>
                       <Text style={styles.bioText}>{bio}</Text>
@@ -203,8 +207,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                           key={pet.id}
                           pet={pet}
                           isFavorite={false}
-                          onPress={() => {}}
-                          onFavoritePress={() => {}}
+                          onPress={() => { }}
+                          onFavoritePress={() => { }}
                         />
                       ))}
                     </View>
@@ -222,14 +226,19 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   modalContainer: {
     flex: 1,
     backgroundColor: theme.colors.background.primary,
-    marginTop: 100,
-    borderTopLeftRadius: theme.borderRadius['2xl'],
-    borderTopRightRadius: theme.borderRadius['2xl'],
+    marginTop: 80,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   safeArea: {
     flex: 1,
@@ -240,19 +249,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
+    backgroundColor: theme.colors.background.primary,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
   },
   headerTitle: {
-    fontSize: theme.typography.fontSize['2xl'],
+    fontSize: 22,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.primary,
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.background.secondary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.background.primary,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -266,38 +278,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.spacing.xl * 2,
   },
   profileHeader: {
     alignItems: 'center',
     paddingVertical: theme.spacing.xl,
     paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.background.primary,
   },
   profileAvatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    marginBottom: theme.spacing.md,
-    borderWidth: 4,
-    borderColor: theme.colors.primary[200],
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    marginBottom: theme.spacing.lg,
+    borderWidth: 3,
+    borderColor: theme.colors.primary[400],
   },
   avatarPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    marginBottom: theme.spacing.md,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    marginBottom: theme.spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: theme.colors.primary[200],
   },
   avatarText: {
-    fontSize: 48,
+    fontSize: 44,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: 'white',
   },
   displayName: {
-    fontSize: theme.typography.fontSize['2xl'],
+    fontSize: 24,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.sm,
@@ -306,7 +317,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: theme.spacing.xs,
-    gap: theme.spacing.xs,
+    gap: theme.spacing.sm,
   },
   infoText: {
     fontSize: theme.typography.fontSize.base,
@@ -314,26 +325,28 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
   },
   bioContainer: {
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.background.secondary,
-    borderRadius: theme.borderRadius.lg,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
     width: '100%',
   },
   bioText: {
     fontSize: theme.typography.fontSize.base,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.primary,
-    lineHeight: 22,
+    lineHeight: 24,
     textAlign: 'center',
   },
   petsSection: {
     paddingHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.md,
   },
   sectionTitle: {
-    fontSize: theme.typography.fontSize.xl,
+    fontSize: 18,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.md,
@@ -345,6 +358,10 @@ const styles = StyleSheet.create({
   emptyPetsContainer: {
     alignItems: 'center',
     paddingVertical: theme.spacing.xl,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
   },
   emptyPetsText: {
     fontSize: theme.typography.fontSize.base,

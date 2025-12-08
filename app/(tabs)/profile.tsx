@@ -14,8 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  User, 
+import {
+  User,
   Heart,
   FileText,
   MapPin,
@@ -30,6 +30,13 @@ import { UserProfileService, PetService, MapSpotService } from '../../services/f
 import { PetCard } from '../../components/common/PetCard';
 import { Pet } from '../../types';
 
+// Fotoğraf URL'sinin geçerli ve kalıcı olup olmadığını kontrol et
+const isValidPhotoURL = (url: string | null | undefined): boolean => {
+  if (!url || url.trim() === '') return false;
+  if (url.startsWith('file://')) return false;
+  return url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://');
+};
+
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const { user, isAuthenticated, logout, setUser } = useAuthStore();
@@ -41,7 +48,7 @@ export default function ProfileScreen() {
   const [contributionsCount, setContributionsCount] = useState(0);
   const [loadingCounts, setLoadingCounts] = useState(false);
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
-  
+
   const photoURL = user?.photoURL || '';
   const [imageError, setImageError] = useState(false);
 
@@ -61,7 +68,7 @@ export default function ProfileScreen() {
 
   const loadUserPets = useCallback(async () => {
     if (!user?.id) return;
-    
+
     setLoadingPets(true);
     try {
       const pets = await PetService.getUserPets(user.id);
@@ -75,21 +82,21 @@ export default function ProfileScreen() {
 
   const loadProfileCounts = useCallback(async () => {
     if (!user?.id) return;
-    
+
     setLoadingCounts(true);
     try {
       // Get fresh user profile from Firestore to get updated favorites
       const profileData = await UserProfileService.getUserProfile(user.id);
       const favorites = profileData?.favorites || user.favorites || [];
-      
+
       // Get saved count from user favorites
       const savedCountValue = Array.isArray(favorites) ? favorites.length : 0;
       setSavedCount(savedCountValue);
-      
+
       // Get contributions count from map spots
       const contributionsCountValue = await MapSpotService.getMapSpotsCount(user.id);
       setContributionsCount(contributionsCountValue);
-      
+
       console.log('ProfileScreen: Loaded counts:', {
         saved: savedCountValue,
         contributions: contributionsCountValue,
@@ -130,7 +137,7 @@ export default function ProfileScreen() {
               console.log('👁️ ProfileScreen: Focus effect - refreshing profile...');
               console.log('👁️ ProfileScreen: Current user photoURL:', user.photoURL);
               console.log('👁️ ProfileScreen: Firestore profileData photoURL:', profileData.photoURL);
-              
+
               let photoURL = user.photoURL || '';
               if (profileData.photoURL && typeof profileData.photoURL === 'string' && profileData.photoURL.trim() !== '') {
                 photoURL = profileData.photoURL;
@@ -138,7 +145,7 @@ export default function ProfileScreen() {
               } else {
                 console.log('👁️ ProfileScreen: Keeping current photoURL:', photoURL);
               }
-              
+
               const updatedUser = {
                 ...user,
                 displayName: profileData.displayName || user.displayName,
@@ -147,7 +154,7 @@ export default function ProfileScreen() {
                 bio: profileData.bio || user.bio,
                 updatedAt: profileData.updatedAt || user.updatedAt,
               };
-              
+
               setUser(updatedUser);
               console.log('✅ ProfileScreen: Profile refreshed on focus:', {
                 photoURL: updatedUser.photoURL,
@@ -160,7 +167,7 @@ export default function ProfileScreen() {
             console.error('Error refreshing profile on focus:', error);
           }
         };
-        
+
         refreshProfile();
         loadUserPets();
         loadProfileCounts();
@@ -170,20 +177,20 @@ export default function ProfileScreen() {
 
   const onRefresh = async () => {
     if (!user?.id) return;
-    
+
     setRefreshing(true);
     try {
       console.log('Refreshing profile data for user:', user.id);
-      
+
       // Firestore'dan güncel profil verilerini çek
       const profileData = await UserProfileService.getUserProfile(user.id);
-      
+
       if (profileData) {
         // photoURL kontrolü: Firestore'dan gelen varsa onu kullan
         console.log('🔄 ProfileScreen: Refreshing profile data...');
         console.log('🔄 ProfileScreen: Current user photoURL:', user.photoURL);
         console.log('🔄 ProfileScreen: Firestore profileData photoURL:', profileData.photoURL);
-        
+
         let photoURL = user.photoURL || '';
         if (profileData.photoURL && typeof profileData.photoURL === 'string' && profileData.photoURL.trim() !== '') {
           photoURL = profileData.photoURL;
@@ -191,7 +198,7 @@ export default function ProfileScreen() {
         } else {
           console.log('🔄 ProfileScreen: Keeping current photoURL:', photoURL);
         }
-        
+
         // Güncel verilerle user state'ini güncelle
         const updatedUser = {
           ...user,
@@ -201,7 +208,7 @@ export default function ProfileScreen() {
           bio: profileData.bio || user.bio,
           updatedAt: profileData.updatedAt || user.updatedAt,
         };
-        
+
         setUser(updatedUser);
         console.log('✅ ProfileScreen: Profile data refreshed:', {
           displayName: updatedUser.displayName,
@@ -211,11 +218,11 @@ export default function ProfileScreen() {
           photoURLIsFile: updatedUser.photoURL.startsWith('file://'),
           photoURLIsHttp: updatedUser.photoURL.startsWith('http://') || updatedUser.photoURL.startsWith('https://'),
         });
-        
+
         // Pet'leri ve sayıları da yenile
         await loadUserPets();
         await loadProfileCounts();
-        
+
         // Başarı popup'ı göster
         Alert.alert('✅ Güncellendi', 'Profil bilgileriniz başarıyla güncellendi!');
       } else {
@@ -257,7 +264,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
-        
+
         <View style={styles.content}>
           <View style={styles.loginPrompt}>
             <LinearGradient
@@ -269,7 +276,7 @@ export default function ProfileScreen() {
               <Text style={styles.loginSubtitle}>
                 Favorilerinizi, ilanlarınızı ve katkılarınızı görmek için giriş yapın
               </Text>
-              
+
               <TouchableOpacity style={styles.loginButton}>
                 <LinearGradient
                   colors={[theme.colors.gradient.start, theme.colors.gradient.end]}
@@ -288,8 +295,8 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
-      
-      <ScrollView 
+
+      <ScrollView
         style={styles.scrollView}
         refreshControl={
           <RefreshControl
@@ -304,70 +311,48 @@ export default function ProfileScreen() {
       >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          {photoURL && photoURL.trim() !== '' && !imageError ? (
-            <Image 
-              source={{ uri: photoURL }} 
+          {isValidPhotoURL(photoURL) && !imageError ? (
+            <Image
+              source={{ uri: photoURL }}
               style={styles.profileAvatar}
-              onError={(error) => {
-                console.log('❌ ProfileScreen: Image load error:', {
-                  photoURL: photoURL,
-                  error: error,
-                  errorType: typeof error,
-                  isFile: photoURL.startsWith('file://'),
-                  isHttp: photoURL.startsWith('http://') || photoURL.startsWith('https://'),
-                });
-                // Silently handle image load errors - show placeholder instead
-                setImageError(true);
-              }}
-              onLoadStart={() => {
-                console.log('🔄 ProfileScreen: Image load started:', {
-                  photoURL: photoURL,
-                  isFile: photoURL.startsWith('file://'),
-                  isHttp: photoURL.startsWith('http://') || photoURL.startsWith('https://'),
-                });
-                setImageError(false);
-              }}
-              onLoad={() => {
-                console.log('✅ ProfileScreen: Image loaded successfully:', {
-                  photoURL: photoURL,
-                });
-              }}
+              onError={() => setImageError(true)}
+              onLoadStart={() => setImageError(false)}
             />
           ) : (
             <LinearGradient
-              colors={[theme.colors.primary[500], theme.colors.primary[600]]}
+              colors={[theme.colors.primary[400], theme.colors.primary[500]]}
               style={styles.avatar}
             >
-              <User size={40} color="white" />
+              <User size={44} color="white" />
             </LinearGradient>
           )}
-          
+
           <Text style={styles.displayName}>
             {user?.displayName || user?.email?.split('@')[0] || 'Pet Lover'}
           </Text>
-          
+
           {user?.email && (
             <View style={styles.infoRow}>
               <Text style={styles.infoEmoji}>📧</Text>
               <Text style={styles.email}>{user.email}</Text>
             </View>
           )}
-          
+
           {user?.city && (
             <View style={styles.infoRow}>
               <Text style={styles.infoEmoji}>📍</Text>
               <Text style={styles.location}>{user.city}</Text>
             </View>
           )}
-          
+
           {user?.bio && (
             <View style={styles.bioContainer}>
               <Text style={styles.bioLabel}>💬 Hakkımda</Text>
               <Text style={styles.bio}>{user.bio}</Text>
             </View>
           )}
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.editProfileButton}
             onPress={() => {
               console.log('Edit profile button pressed');
@@ -390,7 +375,7 @@ export default function ProfileScreen() {
                     pet={pet as Pet}
                     isFavorite={false}
                     onPress={() => console.log('Pet pressed:', pet.id)}
-                    onFavoritePress={() => {}}
+                    onFavoritePress={() => { }}
                   />
                 </View>
               ))}
@@ -460,8 +445,8 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
-      
-      <EditProfileModal 
+
+      <EditProfileModal
         visible={showEditModal}
         onClose={() => setShowEditModal(false)}
       />
@@ -498,11 +483,12 @@ const styles = StyleSheet.create({
   loginCard: {
     alignItems: 'center',
     padding: theme.spacing.xl,
-    borderRadius: theme.borderRadius['2xl'],
+    borderRadius: 24,
     marginHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.background.primary,
   },
   loginTitle: {
-    fontSize: theme.typography.fontSize.xl,
+    fontSize: 22,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.primary,
     marginTop: theme.spacing.lg,
@@ -519,15 +505,17 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     shadowColor: theme.colors.primary[500],
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+    borderRadius: 50,
+    overflow: 'hidden',
   },
   loginGradient: {
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.full,
+    borderRadius: 50,
   },
   loginButtonText: {
     color: theme.colors.text.inverse,
@@ -536,59 +524,57 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     alignItems: 'center',
-    padding: theme.spacing.xl,
-    backgroundColor: theme.colors.background.secondary,
-    marginBottom: 0,
+    paddingVertical: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.background.primary,
+    marginBottom: theme.spacing.md,
   },
   avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.lg,
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderWidth: 3,
+    borderColor: theme.colors.primary[300],
   },
   displayName: {
-    fontSize: theme.typography.fontSize['2xl'],
+    fontSize: 24,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.xs,
+    gap: theme.spacing.sm,
   },
   infoEmoji: {
-    fontSize: 18,
+    fontSize: 16,
   },
   email: {
-    fontSize: theme.typography.fontSize.base,
+    fontSize: 15,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.secondary,
   },
   location: {
-    fontSize: theme.typography.fontSize.base,
+    fontSize: 15,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.secondary,
   },
   optionsContainer: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: 100, // Account for tab bar
+    paddingTop: theme.spacing.sm,
+    paddingBottom: 100,
   },
   optionsCard: {
-    backgroundColor: 'white',
-    borderRadius: theme.borderRadius.xl,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 20,
     marginBottom: theme.spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
     overflow: 'hidden',
   },
   optionItem: {
@@ -596,7 +582,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.lg,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
   },
@@ -609,22 +595,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.primary[50],
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.colors.primary[100],
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: theme.spacing.md,
   },
   settingsIcon: {
-    backgroundColor: theme.colors.background.tertiary,
+    backgroundColor: theme.colors.background.primary,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
   },
   logoutIcon: {
     backgroundColor: theme.colors.error[50],
   },
   optionTitle: {
-    fontSize: theme.typography.fontSize.base,
+    fontSize: 15,
     fontFamily: theme.typography.fontFamily.bodySemiBold,
     color: theme.colors.text.primary,
     flex: 1,
@@ -633,35 +621,32 @@ const styles = StyleSheet.create({
     marginLeft: theme.spacing.sm,
   },
   countBadge: {
-    backgroundColor: theme.colors.primary[50],
-    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.primary[100],
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: theme.borderRadius.full,
+    borderRadius: 20,
     minWidth: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   optionCount: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: 14,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.primary[600],
   },
   settingsCard: {
-    backgroundColor: 'white',
-    borderRadius: theme.borderRadius.xl,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 20,
     marginBottom: theme.spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
     overflow: 'hidden',
   },
   settingsItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.lg,
+    paddingVertical: 16,
   },
   divider: {
     height: 1,
@@ -672,61 +657,61 @@ const styles = StyleSheet.create({
     color: theme.colors.error[500],
   },
   editProfileButton: {
-    backgroundColor: theme.colors.background.secondary,
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.primary[500],
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 50,
     marginTop: theme.spacing.lg,
-    borderWidth: 2,
-    borderColor: theme.colors.primary[200],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: theme.colors.primary[500],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   editProfileText: {
-    color: theme.colors.text.primary,
-    fontSize: theme.typography.fontSize.base,
+    color: 'white',
+    fontSize: 15,
     fontFamily: theme.typography.fontFamily.bodySemiBold,
     textAlign: 'center',
   },
   profileAvatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
+    borderColor: theme.colors.primary[300],
     marginBottom: theme.spacing.lg,
   },
   bioContainer: {
     marginTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: theme.borderRadius.lg,
-    maxWidth: '90%',
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+    width: '100%',
   },
   bioLabel: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: 13,
     fontFamily: theme.typography.fontFamily.bodySemiBold,
     color: theme.colors.text.secondary,
     marginBottom: theme.spacing.xs,
     textAlign: 'center',
   },
   bio: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: 14,
     fontFamily: theme.typography.fontFamily.body,
-    color: theme.colors.text.secondary,
+    color: theme.colors.text.primary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
   },
   petsSection: {
     paddingHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
-    fontSize: theme.typography.fontSize.xl,
+    fontSize: 18,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.md,

@@ -43,12 +43,12 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
   const router = useRouter();
   const [mediaGalleryVisible, setMediaGalleryVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  
+
   // Get first photo URL
-  const imageURL = pet?.photos && Array.isArray(pet.photos) && pet.photos.length > 0 
-    ? pet.photos[0] 
+  const imageURL = pet?.photos && Array.isArray(pet.photos) && pet.photos.length > 0
+    ? pet.photos[0]
     : null;
-  
+
   if (!pet) return null;
 
   const isOwner = currentUserId && pet.ownerId === currentUserId;
@@ -92,7 +92,7 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
             {/* Header with Image */}
             <View style={styles.imageContainer}>
               <Image
-                source={{ 
+                source={{
                   uri: imageURL || 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg'
                 }}
                 style={styles.petImage}
@@ -102,17 +102,17 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
                 colors={['transparent', 'rgba(0,0,0,0.7)']}
                 style={styles.imageGradient}
               />
-              
+
               {/* Close Button */}
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                <X size={24} color="white" />
+                <X size={22} color={theme.colors.text.primary} />
               </TouchableOpacity>
 
               {/* Favorite Button */}
               <TouchableOpacity style={styles.favoriteButton} onPress={onFavoritePress}>
-                <Heart 
-                  size={24} 
-                  color={isFavorite ? '#EF4444' : 'white'} 
+                <Heart
+                  size={22}
+                  color={isFavorite ? '#EF4444' : theme.colors.text.secondary}
                   fill={isFavorite ? '#EF4444' : 'transparent'}
                 />
               </TouchableOpacity>
@@ -218,7 +218,7 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
               {/* Action Buttons */}
               <View style={styles.actionButtons}>
                 {isOwner ? (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.editButton}
                     onPress={() => {
                       setEditModalVisible(true);
@@ -233,7 +233,7 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
                     </LinearGradient>
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.contactButton}
                     onPress={() => {
                       if (onContactPress) {
@@ -283,31 +283,28 @@ const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   modalContainer: {
     width: '100%',
-    height: '90%',
-    borderRadius: 24,
+    height: '92%',
+    borderRadius: 28,
     overflow: 'hidden',
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background.primary,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
   },
   content: {
     flex: 1,
   },
   imageContainer: {
-    height: height * 0.25,
+    height: height * 0.28,
     position: 'relative',
   },
   petImage: {
@@ -319,83 +316,97 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 100,
+    height: 120,
   },
   closeButton: {
     position: 'absolute',
-    top: 20,
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    top: 16,
+    right: 16,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   favoriteButton: {
     position: 'absolute',
-    top: 20,
-    left: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    top: 16,
+    left: 16,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   nameOverlay: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
+    bottom: 16,
+    left: 16,
+    right: 16,
   },
   petName: {
-    fontSize: 28,
+    fontSize: 26,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: 'white',
     marginBottom: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
   petBreed: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: theme.typography.fontFamily.body,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    color: 'rgba(255, 255, 255, 0.95)',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
   contentArea: {
     flex: 1,
     padding: 16,
+    backgroundColor: theme.colors.background.primary,
   },
   infoSection: {
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.primary,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   infoGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 8,
   },
   infoItem: {
     flex: 1,
     alignItems: 'center',
-    padding: 8,
-    backgroundColor: theme.colors.background.secondary,
-    borderRadius: 8,
-    marginHorizontal: 2,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
   },
   infoLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.secondary,
-    marginTop: 4,
+    marginTop: 6,
     marginBottom: 2,
   },
   infoValue: {
@@ -406,43 +417,55 @@ const styles = StyleSheet.create({
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary,
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: theme.colors.background.primary,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
   },
   locationText: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.primary,
-    marginLeft: 8,
+    marginLeft: 10,
   },
   healthGrid: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   healthItem: {
     flex: 1,
-    padding: 8,
-    backgroundColor: theme.colors.background.secondary,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 14,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
   },
   healthItemActive: {
     backgroundColor: theme.colors.primary[50],
+    borderColor: theme.colors.primary[200],
   },
   healthText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.secondary,
   },
   healthTextActive: {
     color: theme.colors.primary[600],
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
   },
   description: {
     fontSize: 14,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.primary,
-    lineHeight: 20,
+    lineHeight: 22,
+    backgroundColor: theme.colors.background.primary,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -451,28 +474,34 @@ const styles = StyleSheet.create({
   },
   tag: {
     backgroundColor: theme.colors.primary[100],
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   tagText: {
-    fontSize: 12,
-    fontFamily: theme.typography.fontFamily.body,
+    fontSize: 13,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
     color: theme.colors.primary[600],
   },
   actionButtons: {
-    marginTop: 12,
+    marginTop: 16,
+    paddingBottom: 8,
   },
   contactButton: {
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: theme.colors.primary[500],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   contactGradient: {
     paddingVertical: 16,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
   },
   contactText: {
     fontSize: 16,
@@ -480,15 +509,20 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   editButton: {
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: theme.colors.primary[500],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   editGradient: {
     paddingVertical: 16,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
   },
   editText: {
     fontSize: 16,
@@ -500,44 +534,36 @@ const styles = StyleSheet.create({
   },
   // Media Gallery Button
   mediaGalleryButton: {
-    backgroundColor: theme.colors.background.secondary,
-    borderRadius: 12,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 16,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: theme.colors.border.light,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   mediaGalleryButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
   },
   mediaGalleryButtonTextContainer: {
     flex: 1,
     marginLeft: 12,
   },
   mediaGalleryButtonTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.primary,
     marginBottom: 2,
   },
   mediaGalleryButtonSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.secondary,
   },
   mediaGalleryButtonArrow: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: theme.colors.primary[100],
     alignItems: 'center',
     justifyContent: 'center',
