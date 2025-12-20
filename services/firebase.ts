@@ -47,13 +47,13 @@ const getFirebaseConfig = () => {
 
   // Development fallback values (for local development only)
   const devFallback = {
-    apiKey: 'AIzaSyB9zqqbVuCaPO3tL1uMhXcCPi-F7rJmcr0',
-    authDomain: 'petmedia-app-v2.firebaseapp.com',
-    projectId: 'petmedia-app-v2',
-    storageBucket: 'petmedia-app-v2.firebasestorage.app',
-    messagingSenderId: '17357521540',
-    appId: '1:17357521540:web:c7168bf86db8697c5df8d1',
-    measurementId: 'G-9W68V4VT5D',
+    apiKey: 'your_firebase_api_key_here',
+    authDomain: 'your_project.firebaseapp.com',
+    projectId: 'your_project_id',
+    storageBucket: 'your_project.firebasestorage.app',
+    messagingSenderId: '123456789',
+    appId: '1:123456789:web:abcdef123456',
+    measurementId: 'G-XXXXXXXXXX',
   };
 
   // Helper function to check if a value is a placeholder
