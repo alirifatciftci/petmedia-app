@@ -14,8 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  Heart, 
+import {
+  Heart,
   Home as HomeIcon,
   Users,
   Droplets
@@ -45,13 +45,13 @@ export default function HomeScreen() {
     title: '',
     description: '',
     icon: null as React.ReactNode,
-    onConfirm: () => {}
+    onConfirm: () => { }
   });
   const [petDetailVisible, setPetDetailVisible] = useState(false);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
   const [loadingPets, setLoadingPets] = useState(true);
-  
+
   const { favorites, toggleFavorite } = usePetStore();
 
   const handleToggleFavorite = async (petId: string) => {
@@ -59,7 +59,7 @@ export default function HomeScreen() {
 
     // Update local state
     toggleFavorite(petId);
-    
+
     // Get updated favorites
     const isCurrentlyFavorite = favorites.includes(petId);
     const updatedFavorites = isCurrentlyFavorite
@@ -110,14 +110,14 @@ export default function HomeScreen() {
       const ownerInfo = await UserService.getUserById(pet.ownerId);
       const ownerName = (ownerInfo as any)?.displayName || (ownerInfo as any)?.email || 'İlan Sahibi';
       const ownerPhoto = (ownerInfo as any)?.photoURL || '';
-      
+
       console.log('HomeScreen: Owner info retrieved:', { ownerName, ownerPhoto });
-      
+
       // Get or create chat thread (returns existing chat if exists, creates new if not)
       console.log('HomeScreen: Getting or creating chat thread...');
       const chatId = await MessageService.getOrCreateThread(user.id, pet.ownerId);
       console.log('HomeScreen: Chat thread ID:', chatId);
-      
+
       // Navigate to chat screen with chatId and user info
       console.log('HomeScreen: Navigating to chat screen with params:', {
         chatId,
@@ -125,7 +125,7 @@ export default function HomeScreen() {
         otherUserName: ownerName,
         otherUserPhoto: ownerPhoto,
       });
-      
+
       router.push({
         pathname: '/chat',
         params: {
@@ -190,14 +190,14 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
-      
+
       {/* Header */}
-      <AppHeader 
+      <AppHeader
         showLogin={true}
         onLoginPress={() => console.log('Login pressed')}
       />
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -210,8 +210,8 @@ export default function HomeScreen() {
             icon={<HomeIcon size={32} color="white" />}
             onPress={() => {
               setModalContent({
-                title: "🏠 Yuva Bul",
-                description: "Her yıl binlerce sevimli dostumuz sokaklarda yaşıyor. Onlara güvenli bir yuva bulmak, sadece bir ev değil, sevgi dolu bir aile demek. Bu dostlarımızın hayatını değiştirebilir, onlara ikinci bir şans verebilirsiniz. Her sahiplenme, bir hayat kurtarır ve dünyayı daha güzel bir yer yapar.",
+                title: t('modal.findHomeTitle'),
+                description: t('modal.findHomeDesc'),
                 icon: <HomeIcon size={40} color={theme.colors.primary[500]} />,
                 onConfirm: () => {
                   console.log('Find home pressed');
@@ -221,15 +221,15 @@ export default function HomeScreen() {
               setModalVisible(true);
             }}
           />
-          
+
           <FeatureCard
             title={t('features.findFriend.title')}
             backgroundColor={theme.colors.cards.lightBlue}
             icon={<Users size={32} color="white" />}
             onPress={() => {
               setModalContent({
-                title: "👥 Arkadaş Bul",
-                description: "Pet sahipleriyle tanışmak, deneyimlerinizi paylaşmak ve birlikte güzel anılar biriktirmek için harika bir fırsat! Aynı sevgiyi paylaşan insanlarla bağ kurun, yeni dostluklar edinin ve pet dünyasının bir parçası olun. Birlikte daha güçlüyüz!",
+                title: t('modal.findFriendTitle'),
+                description: t('modal.findFriendDesc'),
                 icon: <Users size={40} color={theme.colors.primary[500]} />,
                 onConfirm: () => {
                   console.log('Find friend pressed');
@@ -239,15 +239,15 @@ export default function HomeScreen() {
               setModalVisible(true);
             }}
           />
-          
+
           <FeatureCard
             title={t('features.foodWater.title')}
             backgroundColor={theme.colors.cards.orange}
             icon={<Droplets size={32} color="white" />}
             onPress={() => {
               setModalContent({
-                title: "💧 Yemek & Su",
-                description: "Sokaklarda aç kalan dostlarımız için küçük bir yardım büyük fark yaratır. Bir kap su, bir parça yemek onların hayatını kurtarabilir. Bu sevgi dolu dostlarımızın temel ihtiyaçlarını karşılamak, onlara umut vermek demektir. Her yardım, bir hayat kurtarır.",
+                title: t('modal.foodWaterTitle'),
+                description: t('modal.foodWaterDesc'),
                 icon: <Droplets size={40} color={theme.colors.primary[500]} />,
                 onConfirm: () => {
                   console.log('Food/water pressed');
@@ -269,31 +269,29 @@ export default function HomeScreen() {
               <View style={styles.heroIconContainer}>
                 <PawIcon size={60} color="white" />
               </View>
-              
+
               <Text style={styles.heroTitle}>
-                🐾 Dostlarımızı Yalnız Bırakmıyoruz
+                {t('hero.title')}
               </Text>
-              
+
               <Text style={styles.heroDescription}>
-                Her sevimli dostumuz bir aile bekliyor. Onlara güvenli bir yuva, 
-                sevgi dolu bir kalp ve sonsuz mutluluk verelim. Birlikte daha güzel 
-                bir dünya kuralım! 💕
+                {t('hero.description')}
               </Text>
-              
+
               <View style={styles.heroStats}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>1000+</Text>
-                  <Text style={styles.statLabel}>Mutlu Aile</Text>
+                  <Text style={styles.statLabel}>{t('hero.happyFamilies')}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>500+</Text>
-                  <Text style={styles.statLabel}>Kurtarılan Hayat</Text>
+                  <Text style={styles.statLabel}>{t('hero.savedLives')}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>24/7</Text>
-                  <Text style={styles.statLabel}>Destek</Text>
+                  <Text style={styles.statLabel}>{t('hero.support')}</Text>
                 </View>
               </View>
             </View>
@@ -302,15 +300,15 @@ export default function HomeScreen() {
 
         {/* Search Section */}
         <View style={styles.searchSection}>
-          <Text style={styles.sectionTitle}>Sahiplenmek İsteyenler</Text>
+          <Text style={styles.sectionTitle}>{t('home.title')}</Text>
 
           {/* Filter Buttons */}
           <View style={styles.filterContainer}>
             {[
-              { key: 'all', label: 'Hepsi' },
-              { key: 'cat', label: 'Kediler' },
-              { key: 'dog', label: 'Köpekler' },
-              { key: 'other', label: 'Diğerleri' }
+              { key: 'all', label: t('home.filters.all') },
+              { key: 'cat', label: t('home.filters.cats') },
+              { key: 'dog', label: t('home.filters.dogs') },
+              { key: 'other', label: t('home.filters.other') }
             ].map((filter) => (
               <TouchableOpacity
                 key={filter.key}
@@ -337,11 +335,11 @@ export default function HomeScreen() {
         <View style={styles.petsContainer}>
           {loadingPets ? (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Yükleniyor...</Text>
+              <Text style={styles.loadingText}>{t('common.loading')}</Text>
             </View>
           ) : filteredPets.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Henüz ilan bulunmuyor</Text>
+              <Text style={styles.emptyText}>{t('common.noListings')}</Text>
             </View>
           ) : (
             <View style={styles.petsGrid}>
@@ -363,8 +361,8 @@ export default function HomeScreen() {
         description={modalContent.description}
         icon={modalContent.icon}
         onConfirm={modalContent.onConfirm}
-        confirmText="Devam Et"
-        cancelText="İptal"
+        confirmText={t('common.continue')}
+        cancelText={t('common.cancel')}
       />
 
       {/* Pet Detail Modal */}

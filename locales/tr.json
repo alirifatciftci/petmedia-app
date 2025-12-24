@@ -1,6 +1,6 @@
 {
   "common": {
-    "login": "Login",
+    "login": "Giriş",
     "logout": "Çıkış Yap",
     "save": "Kaydet",
     "cancel": "İptal",
@@ -10,7 +10,9 @@
     "error": "Hata oluştu",
     "retry": "Tekrar Dene",
     "search": "Ara...",
-    "filter": "Filtrele"
+    "filter": "Filtrele",
+    "continue": "Devam Et",
+    "noListings": "Henüz ilan bulunmuyor"
   },
   "brand": {
     "name": "PETMEDIA",
@@ -22,7 +24,7 @@
       "description": "Sahipsiz dostlarımız için sıcak bir yuva bulun"
     },
     "findFriend": {
-      "title": "Dostlarımıza Arkadaş", 
+      "title": "Dostlarımıza Arkadaş",
       "description": "Sokaktaki dostlarımızla bağ kurun"
     },
     "foodWater": {
@@ -30,13 +32,28 @@
       "description": "Sokaktaki dostlarımızın temel ihtiyaçlarını karşılayın"
     }
   },
+  "hero": {
+    "title": "🐾 Dostlarımızı Yalnız Bırakmıyoruz",
+    "description": "Her sevimli dostumuz bir aile bekliyor. Onlara güvenli bir yuva, sevgi dolu bir kalp ve sonsuz mutluluk verelim. Birlikte daha güzel bir dünya kuralım! 💕",
+    "happyFamilies": "Mutlu Aile",
+    "savedLives": "Kurtarılan Hayat",
+    "support": "Destek"
+  },
+  "modal": {
+    "findHomeTitle": "🏠 Yuva Bul",
+    "findHomeDesc": "Her yıl binlerce sevimli dostumuz sokaklarda yaşıyor. Onlara güvenli bir yuva bulmak, sadece bir ev değil, sevgi dolu bir aile demek. Bu dostlarımızın hayatını değiştirebilir, onlara ikinci bir şans verebilirsiniz. Her sahiplenme, bir hayat kurtarır ve dünyayı daha güzel bir yer yapar.",
+    "findFriendTitle": "👥 Arkadaş Bul",
+    "findFriendDesc": "Pet sahipleriyle tanışmak, deneyimlerinizi paylaşmak ve birlikte güzel anılar biriktirmek için harika bir fırsat! Aynı sevgiyi paylaşan insanlarla bağ kurun, yeni dostluklar edinin ve pet dünyasının bir parçası olun. Birlikte daha güçlüyüz!",
+    "foodWaterTitle": "💧 Yemek & Su",
+    "foodWaterDesc": "Sokaklarda aç kalan dostlarımız için küçük bir yardım büyük fark yaratır. Bir kap su, bir parça yemek onların hayatını kurtarabilir. Bu sevgi dolu dostlarımızın temel ihtiyaçlarını karşılamak, onlara umut vermek demektir. Her yardım, bir hayat kurtarır."
+  },
   "mission": {
     "headline": "Dostlarımızı yalnız bırakmıyoruz.",
     "description": "\"Bir Kap Mama, Bir Kap Su\" hareketi başladı!\nSokaktaki dostlarımız için küçük bir dokunuşla büyük fark yaratabileceğimize inanıyoruz. PetMedia olarak, herkesin evinin önüne bir kap mama ve bir kap su koyarak hayvan dostlarımıza destek olmasını teşvik ediyoruz.\nKüçük bir kap, büyük bir iyilik!"
   },
   "navigation": {
     "home": "Ana Sayfa",
-    "map": "Harita", 
+    "map": "Harita",
     "add": "Ekle",
     "messages": "Mesajlar",
     "profile": "Profil"
@@ -54,12 +71,12 @@
     "dontHaveAccount": "Hesabın yok mu?"
   },
   "home": {
-    "title": "Sahiplenmek İsteyen Dostlarımız",
+    "title": "Sahiplenmek İsteyenler",
     "filters": {
       "all": "Hepsi",
       "cats": "Kediler",
-      "dogs": "Köpekler", 
-      "other": "Diğer"
+      "dogs": "Köpekler",
+      "other": "Diğerleri"
     }
   },
   "profile": {
@@ -104,5 +121,83 @@
     "locationPermission": "Konum İzni",
     "locationPermissionMessage": "Harita özelliklerini kullanabilmek için konum izni gereklidir.",
     "tapToAdd": "Haritada bir yere dokunun"
+  },
+  "messages": {
+    "noMessages": "Henüz mesaj yok",
+    "noMessagesDesc": "Yeni mesaj oluştur butonuna tıklayarak diğer kullanıcılarla mesajlaşmaya başlayın",
+    "newMessage": "Yeni Mesaj",
+    "searchUsers": "Kullanıcı ara...",
+    "usersFound": "kullanıcı bulundu",
+    "users": "kullanıcı",
+    "loadingUsers": "Kullanıcılar yükleniyor...",
+    "noUsers": "Henüz kullanıcı yok",
+    "noUsersDesc": "Diğer kullanıcıların uygulamaya kayıt olması gerekiyor",
+    "userNotFound": "Kullanıcı bulunamadı",
+    "now": "Şimdi",
+    "minutesAgo": "dk önce",
+    "hoursAgo": "saat önce"
+  },
+  "addPet": {
+    "title": "Yeni İlan Ekle",
+    "editTitle": "İlanı Düzenle",
+    "loginRequired": "Giriş Yapın",
+    "loginRequiredDesc": "Yeni ilan eklemek için giriş yapmanız gerekiyor",
+    "loginRequiredEditDesc": "İlanı düzenlemek için giriş yapmanız gerekiyor",
+    "loadingPet": "İlan yükleniyor...",
+    "step": "Adım",
+    "back": "Geri",
+    "next": "İleri",
+    "publish": "İlanı Yayınla",
+    "update": "Güncelle",
+    "speciesTitle": "Hayvan Türü",
+    "speciesDesc": "Sahiplendirmek istediğiniz hayvanın türünü seçin",
+    "basicInfoTitle": "Temel Bilgiler",
+    "basicInfoDesc": "Hayvanınız hakkında temel bilgileri girin",
+    "detailsTitle": "Detaylar ve Fotoğraflar",
+    "detailsDesc": "Şehir, açıklama ve fotoğrafları ekleyin",
+    "species": {
+      "cat": "Kedi",
+      "dog": "Köpek",
+      "bird": "Kuş",
+      "rabbit": "Tavşan",
+      "other": "Diğer"
+    },
+    "name": "İsim",
+    "namePlaceholder": "Örn: Luna, Pamuk",
+    "gender": "Cinsiyet",
+    "male": "Erkek",
+    "female": "Dişi",
+    "age": "Yaş (Ay)",
+    "agePlaceholder": "Örn: 12",
+    "size": "Büyüklük",
+    "small": "Küçük",
+    "medium": "Orta",
+    "large": "Büyük",
+    "breed": "Irk (Opsiyonel)",
+    "breedPlaceholder": "Örn: Golden Retriever, Tekir",
+    "city": "Şehir",
+    "cityPlaceholder": "Örn: İstanbul, Ankara",
+    "description": "Açıklama",
+    "descriptionPlaceholder": "Hayvanınız hakkında detaylı bilgi verin...",
+    "healthInfo": "Sağlık Bilgileri",
+    "vaccinated": "Aşılı",
+    "neutered": "Kısırlaştırılmış",
+    "photos": "Fotoğraflar",
+    "photosMin": "En az 1",
+    "addPhoto": "Fotoğraf Ekle",
+    "selectSpecies": "Lütfen hayvan türünü seçin",
+    "fillRequired": "Lütfen tüm zorunlu alanları doldurun",
+    "fillCityDesc": "Lütfen şehir ve açıklama bilgilerini girin",
+    "addPhotoRequired": "Lütfen en az bir fotoğraf ekleyin",
+    "success": "Başarılı",
+    "addSuccess": "Hayvan ilanı başarıyla eklendi!",
+    "updateSuccess": "İlan başarıyla güncellendi!",
+    "addError": "İlan eklenirken bir hata oluştu",
+    "updateError": "İlan güncellenirken bir hata oluştu",
+    "noPermission": "Bu ilanı düzenleme yetkiniz yok",
+    "loadError": "İlan yüklenirken bir hata oluştu",
+    "galleryPermission": "Galeri erişim izni gerekli",
+    "photoError": "Fotoğraf yüklenirken bir hata oluştu",
+    "invalidPhotos": "Geçerli fotoğraf bulunamadı. Lütfen tekrar fotoğraf ekleyin."
   }
 }

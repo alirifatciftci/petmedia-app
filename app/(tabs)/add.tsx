@@ -34,7 +34,7 @@ export default function AddScreen() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [petId, setPetId] = useState<string | null>(params.petId || null);
   const isEditMode = !!petId;
-  
+
   // Form state
   const [step, setStep] = useState(1);
   const [species, setSpecies] = useState<PetSpecies | ''>('');
@@ -59,18 +59,18 @@ export default function AddScreen() {
 
   const loadPetData = async () => {
     if (!petId) return;
-    
+
     setLoadingPet(true);
     try {
       const pet = await PetService.getPet(petId) as Pet;
-      
+
       // Check if user owns this pet
       if (pet.ownerId !== user?.id) {
-        Alert.alert('Hata', 'Bu ilanı düzenleme yetkiniz yok');
+        Alert.alert(t('common.error'), t('addPet.noPermission'));
         router.back();
         return;
       }
-      
+
       // Populate form with pet data
       setSpecies(pet.species);
       setName(pet.name);
@@ -85,7 +85,7 @@ export default function AddScreen() {
       setPhotos(pet.photos || []);
     } catch (error) {
       console.error('Error loading pet:', error);
-      Alert.alert('Hata', 'İlan yüklenirken bir hata oluştu');
+      Alert.alert(t('common.error'), t('addPet.loadError'));
       router.back();
     } finally {
       setLoadingPet(false);
@@ -97,9 +97,9 @@ export default function AddScreen() {
       <SafeAreaView style={styles.container}>
         <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
         <View style={styles.content}>
-          <Text style={styles.title}>Giriş Yapın</Text>
+          <Text style={styles.title}>{t('addPet.loginRequired')}</Text>
           <Text style={styles.subtitle}>
-            {isEditMode ? 'İlanı düzenlemek için' : 'Yeni ilan eklemek için'} giriş yapmanız gerekiyor
+            {isEditMode ? t('addPet.loginRequiredEditDesc') : t('addPet.loginRequiredDesc')}
           </Text>
         </View>
       </SafeAreaView>
@@ -112,7 +112,7 @@ export default function AddScreen() {
         <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
         <View style={styles.content}>
           <ActivityIndicator size="large" color={theme.colors.primary[500]} />
-          <Text style={styles.subtitle}>İlan yükleniyor...</Text>
+          <Text style={styles.subtitle}>{t('addPet.loadingPet')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -121,13 +121,13 @@ export default function AddScreen() {
   const handleImagePicker = async () => {
     try {
       console.log('Photo upload started');
-      
+
       // İzin iste
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       console.log('Permission result:', permissionResult);
-      
+
       if (permissionResult.granted === false) {
-        Alert.alert('Hata', 'Galeri erişim izni gerekli');
+        Alert.alert(t('common.error'), t('addPet.galleryPermission'));
         return;
       }
 
@@ -138,29 +138,29 @@ export default function AddScreen() {
         allowsMultipleSelection: true,
         quality: 0.6,
       });
-      
+
       console.log('Image picker result:', result);
 
       if (!result.canceled && result.assets) {
         console.log(`Selected ${result.assets.length} images`);
         setIsUploadingPhoto(true);
-        
+
         // Her fotoğrafı işle (profil kısmındaki gibi - Firebase Storage'a yükle, başarısız olursa local URI kullan)
         const newPhotoURLs: string[] = [];
-        
+
         for (let i = 0; i < result.assets.length; i++) {
           const asset = result.assets[i];
           console.log(`Processing image ${i + 1}:`, asset.uri);
-          
+
           try {
             // Firebase Storage'a yükle
             const imagePath = `pets/${user!.id}/photo_${Date.now()}_${i}.jpg`;
             const downloadURL = await FirebaseStorage.uploadImage(imagePath, asset.uri);
-            
+
             if (!downloadURL || downloadURL.trim().length === 0) {
               throw new Error('Invalid download URL received');
             }
-            
+
             newPhotoURLs.push(downloadURL);
             console.log(`Image ${i + 1} uploaded successfully, URL: ${downloadURL}`);
           } catch (storageError) {
@@ -170,7 +170,7 @@ export default function AddScreen() {
             console.log(`Image ${i + 1} using local URI: ${asset.uri}`);
           }
         }
-        
+
         // Tüm URL'leri state'e ekle
         if (newPhotoURLs.length > 0) {
           setPhotos([...photos, ...newPhotoURLs]);
@@ -179,7 +179,7 @@ export default function AddScreen() {
       }
     } catch (error) {
       console.error('Photo upload error:', error);
-      Alert.alert('Hata', 'Fotoğraf yüklenirken bir hata oluştu');
+      Alert.alert(t('common.error'), t('addPet.photoError'));
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -192,23 +192,23 @@ export default function AddScreen() {
   const handleNext = () => {
     if (step === 1) {
       if (!species) {
-        Alert.alert('Hata', 'Lütfen hayvan türünü seçin');
+        Alert.alert(t('common.error'), t('addPet.selectSpecies'));
         return;
       }
       setStep(2);
     } else if (step === 2) {
       if (!name || !sex || !ageMonths || !size) {
-        Alert.alert('Hata', 'Lütfen tüm zorunlu alanları doldurun');
+        Alert.alert(t('common.error'), t('addPet.fillRequired'));
         return;
       }
       setStep(3);
     } else if (step === 3) {
       if (!city || !description) {
-        Alert.alert('Hata', 'Lütfen şehir ve açıklama bilgilerini girin');
+        Alert.alert(t('common.error'), t('addPet.fillCityDesc'));
         return;
       }
       if (photos.length === 0) {
-        Alert.alert('Hata', 'Lütfen en az bir fotoğraf ekleyin');
+        Alert.alert(t('common.error'), t('addPet.addPhotoRequired'));
         return;
       }
       handleSubmit();
@@ -222,22 +222,22 @@ export default function AddScreen() {
       // Photos are already converted to base64 in handleImagePicker (profil kısmındaki gibi)
       // Just validate and use them directly
       if (photos.length === 0) {
-        Alert.alert('Hata', 'Lütfen en az bir fotoğraf ekleyin');
+        Alert.alert(t('common.error'), t('addPet.addPhotoRequired'));
         setLoading(false);
         return;
       }
-      
+
       // Validate all photos are valid base64 strings
-      const validPhotos = photos.filter(photo => 
+      const validPhotos = photos.filter(photo =>
         photo && typeof photo === 'string' && photo.trim().length > 0
       );
-      
+
       if (validPhotos.length === 0) {
-        Alert.alert('Hata', 'Geçerli fotoğraf bulunamadı. Lütfen tekrar fotoğraf ekleyin.');
+        Alert.alert(t('common.error'), t('addPet.invalidPhotos'));
         setLoading(false);
         return;
       }
-      
+
       console.log('Using photos (already base64), count:', validPhotos.length);
       console.log('First photo base64 length:', validPhotos[0]?.length || 0);
 
@@ -258,7 +258,7 @@ export default function AddScreen() {
         tags: [],
         status: 'available' as const,
       };
-      
+
       // Only add breed if it's not empty (Firestore doesn't accept undefined)
       if (breed && breed.trim()) {
         petData.breed = breed.trim();
@@ -267,9 +267,9 @@ export default function AddScreen() {
       if (isEditMode && petId) {
         // Update existing pet
         await PetService.updatePet(petId, petData);
-        Alert.alert('Başarılı', 'İlan başarıyla güncellendi!', [
+        Alert.alert(t('addPet.success'), t('addPet.updateSuccess'), [
           {
-            text: 'Tamam',
+            text: t('common.save'),
             onPress: () => {
               router.back();
             },
@@ -278,9 +278,9 @@ export default function AddScreen() {
       } else {
         // Create new pet
         await PetService.addPet(petData);
-        Alert.alert('Başarılı', 'Hayvan ilanı başarıyla eklendi!', [
+        Alert.alert(t('addPet.success'), t('addPet.addSuccess'), [
           {
-            text: 'Tamam',
+            text: t('common.save'),
             onPress: () => {
               // Reset form
               setStep(1);
@@ -301,7 +301,7 @@ export default function AddScreen() {
       }
     } catch (error) {
       console.error('Error saving pet:', error);
-      Alert.alert('Hata', isEditMode ? 'İlan güncellenirken bir hata oluştu' : 'İlan eklenirken bir hata oluştu');
+      Alert.alert(t('common.error'), isEditMode ? t('addPet.updateError') : t('addPet.addError'));
     } finally {
       setLoading(false);
     }
@@ -324,18 +324,7 @@ export default function AddScreen() {
   };
 
   const getSpeciesLabel = (species: PetSpecies) => {
-    switch (species) {
-      case 'cat':
-        return 'Kedi';
-      case 'dog':
-        return 'Köpek';
-      case 'bird':
-        return 'Kuş';
-      case 'rabbit':
-        return 'Tavşan';
-      default:
-        return 'Diğer';
-    }
+    return t(`addPet.species.${species}`);
   };
 
   const getSpeciesEmoji = (species: PetSpecies) => {
@@ -359,9 +348,9 @@ export default function AddScreen() {
 
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Hayvan Türü</Text>
-      <Text style={styles.stepDescription}>Sahiplendirmek istediğiniz hayvanın türünü seçin</Text>
-      
+      <Text style={styles.stepTitle}>{t('addPet.speciesTitle')}</Text>
+      <Text style={styles.stepDescription}>{t('addPet.speciesDesc')}</Text>
+
       <View style={styles.optionsGrid}>
         {(['cat', 'dog', 'bird', 'rabbit', 'other'] as PetSpecies[]).map((s) => {
           const hasError = imageErrors[s];
@@ -404,21 +393,21 @@ export default function AddScreen() {
 
   const renderStep2 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Temel Bilgiler</Text>
-      <Text style={styles.stepDescription}>Hayvanınız hakkında temel bilgileri girin</Text>
-      
+      <Text style={styles.stepTitle}>{t('addPet.basicInfoTitle')}</Text>
+      <Text style={styles.stepDescription}>{t('addPet.basicInfoDesc')}</Text>
+
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>İsim *</Text>
+        <Text style={styles.label}>{t('addPet.name')} *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Örn: Luna, Pamuk"
+          placeholder={t('addPet.namePlaceholder')}
           value={name}
           onChangeText={setName}
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Cinsiyet *</Text>
+        <Text style={styles.label}>{t('addPet.gender')} *</Text>
         <View style={styles.compactOptionsRow}>
           <TouchableOpacity
             style={[styles.compactOptionButton, sex === 'male' && styles.compactOptionButtonActive]}
@@ -427,7 +416,7 @@ export default function AddScreen() {
           >
             <Circle size={16} color={sex === 'male' ? theme.colors.primary[500] : theme.colors.text.secondary} fill={sex === 'male' ? theme.colors.primary[500] : 'transparent'} />
             <Text style={[styles.compactOptionText, sex === 'male' && styles.compactOptionTextActive]}>
-              Erkek
+              {t('addPet.male')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -437,17 +426,17 @@ export default function AddScreen() {
           >
             <Circle size={16} color={sex === 'female' ? theme.colors.primary[500] : theme.colors.text.secondary} fill={sex === 'female' ? theme.colors.primary[500] : 'transparent'} />
             <Text style={[styles.compactOptionText, sex === 'female' && styles.compactOptionTextActive]}>
-              Dişi
+              {t('addPet.female')}
             </Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Yaş (Ay) *</Text>
+        <Text style={styles.label}>{t('addPet.age')} *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Örn: 12"
+          placeholder={t('addPet.agePlaceholder')}
           value={ageMonths}
           onChangeText={setAgeMonths}
           keyboardType="numeric"
@@ -455,7 +444,7 @@ export default function AddScreen() {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Büyüklük *</Text>
+        <Text style={styles.label}>{t('addPet.size')} *</Text>
         <View style={styles.compactOptionsRow}>
           {(['small', 'medium', 'large'] as PetSize[]).map((s) => {
             const IconComponent = s === 'small' ? Minus : s === 'medium' ? Square : Maximize2;
@@ -468,7 +457,7 @@ export default function AddScreen() {
               >
                 <IconComponent size={18} color={size === s ? theme.colors.primary[500] : theme.colors.text.secondary} />
                 <Text style={[styles.compactOptionText, size === s && styles.compactOptionTextActive]}>
-                  {s === 'small' ? 'Küçük' : s === 'medium' ? 'Orta' : 'Büyük'}
+                  {t(`addPet.${s}`)}
                 </Text>
               </TouchableOpacity>
             );
@@ -477,10 +466,10 @@ export default function AddScreen() {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Irk (Opsiyonel)</Text>
+        <Text style={styles.label}>{t('addPet.breed')}</Text>
         <TextInput
           style={styles.input}
-          placeholder="Örn: Golden Retriever, Tekir"
+          placeholder={t('addPet.breedPlaceholder')}
           value={breed}
           onChangeText={setBreed}
         />
@@ -490,24 +479,24 @@ export default function AddScreen() {
 
   const renderStep3 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Detaylar ve Fotoğraflar</Text>
-      <Text style={styles.stepDescription}>Şehir, açıklama ve fotoğrafları ekleyin</Text>
-      
+      <Text style={styles.stepTitle}>{t('addPet.detailsTitle')}</Text>
+      <Text style={styles.stepDescription}>{t('addPet.detailsDesc')}</Text>
+
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Şehir *</Text>
+        <Text style={styles.label}>{t('addPet.city')} *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Örn: İstanbul, Ankara"
+          placeholder={t('addPet.cityPlaceholder')}
           value={city}
           onChangeText={setCity}
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Açıklama *</Text>
+        <Text style={styles.label}>{t('addPet.description')} *</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Hayvanınız hakkında detaylı bilgi verin..."
+          placeholder={t('addPet.descriptionPlaceholder')}
           value={description}
           onChangeText={setDescription}
           multiline
@@ -516,7 +505,7 @@ export default function AddScreen() {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Sağlık Bilgileri</Text>
+        <Text style={styles.label}>{t('addPet.healthInfo')}</Text>
         <View style={styles.checkboxRow}>
           <TouchableOpacity
             style={styles.checkbox}
@@ -525,7 +514,7 @@ export default function AddScreen() {
             <View style={[styles.checkboxBox, vaccinated && styles.checkboxBoxChecked]}>
               {vaccinated && <Text style={styles.checkboxCheckmark}>✓</Text>}
             </View>
-            <Text style={styles.checkboxLabel}>Aşılı</Text>
+            <Text style={styles.checkboxLabel}>{t('addPet.vaccinated')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.checkbox}
@@ -534,13 +523,13 @@ export default function AddScreen() {
             <View style={[styles.checkboxBox, neutered && styles.checkboxBoxChecked]}>
               {neutered && <Text style={styles.checkboxCheckmark}>✓</Text>}
             </View>
-            <Text style={styles.checkboxLabel}>Kısırlaştırılmış</Text>
+            <Text style={styles.checkboxLabel}>{t('addPet.neutered')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Fotoğraflar * (En az 1)</Text>
+        <Text style={styles.label}>{t('addPet.photos')} * ({t('addPet.photosMin')})</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosContainer}>
           {photos.map((photo, index) => (
             <View key={index} style={styles.photoItem}>
@@ -553,8 +542,8 @@ export default function AddScreen() {
               </TouchableOpacity>
             </View>
           ))}
-          <TouchableOpacity 
-            style={[styles.addPhotoButton, isUploadingPhoto && styles.addPhotoButtonDisabled]} 
+          <TouchableOpacity
+            style={[styles.addPhotoButton, isUploadingPhoto && styles.addPhotoButtonDisabled]}
             onPress={handleImagePicker}
             disabled={isUploadingPhoto}
           >
@@ -563,7 +552,7 @@ export default function AddScreen() {
             ) : (
               <>
                 <ImageIcon size={24} color={theme.colors.primary[500]} />
-                <Text style={styles.addPhotoText}>Fotoğraf Ekle</Text>
+                <Text style={styles.addPhotoText}>{t('addPet.addPhoto')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -575,7 +564,7 @@ export default function AddScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
-      
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -583,7 +572,7 @@ export default function AddScreen() {
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               onPress={() => {
                 if (step > 1) {
@@ -595,17 +584,17 @@ export default function AddScreen() {
             >
               <ArrowLeft size={24} color={theme.colors.text.primary} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{isEditMode ? 'İlanı Düzenle' : 'Yeni İlan Ekle'}</Text>
+            <Text style={styles.headerTitle}>{isEditMode ? t('addPet.editTitle') : t('addPet.title')}</Text>
             <View style={styles.headerSpacer} />
           </View>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${(step / 3) * 100}%` }]} />
           </View>
-          <Text style={styles.stepIndicator}>Adım {step}/3</Text>
+          <Text style={styles.stepIndicator}>{t('addPet.step')} {step}/3</Text>
         </View>
 
-        <ScrollView 
-          style={styles.scrollView} 
+        <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -631,13 +620,13 @@ export default function AddScreen() {
                 activeOpacity={0.7}
               >
                 <ArrowLeft size={20} color={theme.colors.text.primary} />
-                <Text style={styles.buttonSecondaryText}>Geri</Text>
+                <Text style={styles.buttonSecondaryText}>{t('addPet.back')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
               style={[
-                styles.button, 
-                styles.buttonPrimary, 
+                styles.button,
+                styles.buttonPrimary,
                 step === 1 && styles.buttonFull,
                 loading && styles.buttonDisabled
               ]}
@@ -650,7 +639,7 @@ export default function AddScreen() {
               ) : (
                 <>
                   <Text style={styles.buttonPrimaryText}>
-                    {step === 3 ? (isEditMode ? 'Güncelle' : 'İlanı Yayınla') : 'İleri'}
+                    {step === 3 ? (isEditMode ? t('addPet.update') : t('addPet.publish')) : t('addPet.next')}
                   </Text>
                   {step === 3 ? (
                     <Check size={20} color="white" style={styles.buttonIcon} />

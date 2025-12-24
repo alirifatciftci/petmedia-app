@@ -170,7 +170,7 @@ export default function MessagesScreen() {
     const otherUser = item.otherUser;
     const displayName = otherUser.displayName || otherUser.email || 'Kullanıcı';
     const initials = displayName.charAt(0).toUpperCase();
-    const lastMessage = item.lastMessage || 'Henüz mesaj yok';
+    const lastMessage = item.lastMessage || t('messages.noMessages');
 
     return (
       <TouchableOpacity
@@ -252,9 +252,9 @@ export default function MessagesScreen() {
     const diff = now.getTime() - messageDate.getTime();
     const minutes = Math.floor(diff / 60000);
 
-    if (minutes < 1) return 'Şimdi';
-    if (minutes < 60) return `${minutes} dk önce`;
-    if (minutes < 1440) return `${Math.floor(minutes / 60)} saat önce`;
+    if (minutes < 1) return t('messages.now');
+    if (minutes < 60) return `${minutes} ${t('messages.minutesAgo')}`;
+    if (minutes < 1440) return `${Math.floor(minutes / 60)} ${t('messages.hoursAgo')}`;
 
     const day = messageDate.getDate();
     const month = messageDate.getMonth() + 1;
@@ -315,9 +315,9 @@ export default function MessagesScreen() {
               color={theme.colors.text.tertiary}
               strokeWidth={1}
             />
-            <Text style={styles.emptyTitle}>Henüz mesaj yok</Text>
+            <Text style={styles.emptyTitle}>{t('messages.noMessages')}</Text>
             <Text style={styles.emptySubtitle}>
-              Yeni mesaj oluştur butonuna tıklayarak diğer kullanıcılarla mesajlaşmaya başlayın
+              {t('messages.noMessagesDesc')}
             </Text>
             <TouchableOpacity
               style={styles.emptyStateButton}
@@ -329,7 +329,7 @@ export default function MessagesScreen() {
                 style={styles.emptyStateButtonGradient}
               >
                 <Plus size={20} color="white" strokeWidth={2.5} />
-                <Text style={styles.emptyStateButtonText}>Yeni Mesaj</Text>
+                <Text style={styles.emptyStateButtonText}>{t('messages.newMessage')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -364,12 +364,12 @@ export default function MessagesScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>Yeni Mesaj</Text>
+                <Text style={styles.modalTitle}>{t('messages.newMessage')}</Text>
                 {!loadingUsers && allUsers.length > 0 && (
                   <Text style={styles.modalSubtitle}>
                     {searchQuery
-                      ? `${filteredUsers.length} kullanıcı bulundu`
-                      : `${allUsers.length} kullanıcı`}
+                      ? `${filteredUsers.length} ${t('messages.usersFound')}`
+                      : `${allUsers.length} ${t('messages.users')}`}
                   </Text>
                 )}
               </View>
@@ -388,7 +388,7 @@ export default function MessagesScreen() {
               <Search size={20} color={theme.colors.text.secondary} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Kullanıcı ara..."
+                placeholder={t('messages.searchUsers')}
                 placeholderTextColor={theme.colors.text.tertiary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -398,7 +398,7 @@ export default function MessagesScreen() {
             {loadingUsers ? (
               <View style={styles.modalLoadingContainer}>
                 <ActivityIndicator size="large" color={theme.colors.primary[500]} />
-                <Text style={styles.loadingText}>Kullanıcılar yükleniyor...</Text>
+                <Text style={styles.loadingText}>{t('messages.loadingUsers')}</Text>
               </View>
             ) : usersError ? (
               <View style={styles.modalEmptyContainer}>
@@ -408,18 +408,18 @@ export default function MessagesScreen() {
                   style={styles.retryButton}
                   onPress={handleNewMessagePress}
                 >
-                  <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+                  <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
                 </TouchableOpacity>
               </View>
             ) : filteredUsers.length === 0 ? (
               <View style={styles.modalEmptyContainer}>
                 <User size={48} color={theme.colors.text.tertiary} />
                 <Text style={styles.modalEmptyText}>
-                  {searchQuery ? 'Kullanıcı bulunamadı' : 'Henüz kullanıcı yok'}
+                  {searchQuery ? t('messages.userNotFound') : t('messages.noUsers')}
                 </Text>
                 {!searchQuery && (
                   <Text style={styles.modalEmptySubtext}>
-                    Diğer kullanıcıların uygulamaya kayıt olması gerekiyor
+                    {t('messages.noUsersDesc')}
                   </Text>
                 )}
               </View>

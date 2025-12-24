@@ -15,34 +15,51 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   showLogin = true,
   onLoginPress,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isAuthenticated } = useAuthStore();
+
+  const currentLang = i18n.language;
+
+  const toggleLanguage = () => {
+    const newLang = currentLang === 'tr' ? 'en' : 'tr';
+    i18n.changeLanguage(newLang);
+  };
 
   return (
     <View style={styles.container}>
       {/* Logo */}
       <View style={styles.logoContainer}>
-        <PawIcon 
-          size={28} 
-          color={theme.colors.primary[500]} 
+        <PawIcon
+          size={28}
+          color={theme.colors.primary[500]}
           fill={theme.colors.primary[500]}
         />
         <Text style={styles.logoText}>{t('brand.name')}</Text>
       </View>
 
-      {/* Login Button */}
-      {showLogin && !isAuthenticated && (
-        <TouchableOpacity onPress={onLoginPress} style={styles.loginButton}>
-          <LinearGradient
-            colors={[theme.colors.gradient.start, theme.colors.gradient.end]}
-            style={styles.loginGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <Text style={styles.loginText}>{t('common.login')}</Text>
-          </LinearGradient>
+      {/* Right Side - Language Toggle & Login */}
+      <View style={styles.rightContainer}>
+        {/* Language Toggle */}
+        <TouchableOpacity onPress={toggleLanguage} style={styles.langButton}>
+          <Text style={[styles.langText, currentLang === 'tr' && styles.langTextActive]}>TR</Text>
+          <Text style={styles.langDivider}>|</Text>
+          <Text style={[styles.langText, currentLang === 'en' && styles.langTextActive]}>EN</Text>
         </TouchableOpacity>
-      )}
+
+        {/* Login Button */}
+        {showLogin && !isAuthenticated && (
+          <TouchableOpacity onPress={onLoginPress} style={styles.loginButton}>
+            <LinearGradient
+              colors={[theme.colors.gradient.start, theme.colors.gradient.end]}
+              style={styles.loginGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.loginText}>{t('common.login')}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -67,6 +84,35 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.fontFamily.bodyBold,
     color: theme.colors.text.primary,
     letterSpacing: 1,
+  },
+  rightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+  },
+  langButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.secondary,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+  },
+  langText: {
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.body,
+    color: theme.colors.text.tertiary,
+    paddingHorizontal: 4,
+  },
+  langTextActive: {
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    color: theme.colors.primary[500],
+  },
+  langDivider: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.border.medium,
   },
   loginButton: {
     shadowColor: theme.colors.primary[500],

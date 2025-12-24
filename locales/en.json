@@ -4,13 +4,15 @@
     "logout": "Logout",
     "save": "Save",
     "cancel": "Cancel",
-    "delete": "Delete", 
+    "delete": "Delete",
     "edit": "Edit",
     "loading": "Loading...",
     "error": "Error occurred",
     "retry": "Retry",
     "search": "Search...",
-    "filter": "Filter"
+    "filter": "Filter",
+    "continue": "Continue",
+    "noListings": "No listings yet"
   },
   "brand": {
     "name": "PETMEDIA",
@@ -18,17 +20,32 @@
   },
   "features": {
     "findHome": {
-      "title": "Find Home for Our Friends",
+      "title": "Find Home",
       "description": "Find a warm home for our homeless friends"
     },
     "findFriend": {
-      "title": "Find Friends for Our Pets",
+      "title": "Find Friends",
       "description": "Connect with our street friends"
     },
     "foodWater": {
-      "title": "One bowl of food\nOne bowl of water",
+      "title": "Food & Water",
       "description": "Meet the basic needs of our street friends"
     }
+  },
+  "hero": {
+    "title": "🐾 We Don't Leave Our Friends Alone",
+    "description": "Every cute friend is waiting for a family. Let's give them a safe home, a loving heart and endless happiness. Let's build a better world together! 💕",
+    "happyFamilies": "Happy Families",
+    "savedLives": "Saved Lives",
+    "support": "Support"
+  },
+  "modal": {
+    "findHomeTitle": "🏠 Find Home",
+    "findHomeDesc": "Every year thousands of cute friends live on the streets. Finding them a safe home means not just a house, but a loving family. You can change the lives of these friends and give them a second chance. Every adoption saves a life and makes the world a better place.",
+    "findFriendTitle": "👥 Find Friends",
+    "findFriendDesc": "A great opportunity to meet pet owners, share your experiences and create beautiful memories together! Connect with people who share the same love, make new friendships and be part of the pet world. We are stronger together!",
+    "foodWaterTitle": "💧 Food & Water",
+    "foodWaterDesc": "A small help makes a big difference for our hungry friends on the streets. A bowl of water, a piece of food can save their lives. Meeting the basic needs of these loving friends means giving them hope. Every help saves a life."
   },
   "mission": {
     "headline": "We don't leave our friends alone.",
@@ -37,7 +54,7 @@
   "navigation": {
     "home": "Home",
     "map": "Map",
-    "add": "Add", 
+    "add": "Add",
     "messages": "Messages",
     "profile": "Profile"
   },
@@ -47,25 +64,25 @@
     "email": "Email",
     "password": "Password",
     "signIn": "Sign In",
-    "signUp": "Sign Up", 
+    "signUp": "Sign Up",
     "forgotPassword": "Forgot Password",
     "createAccount": "Create Account",
     "alreadyHaveAccount": "Already have an account?",
     "dontHaveAccount": "Don't have an account?"
   },
   "home": {
-    "title": "Friends Looking for Adoption",
+    "title": "Looking for Adoption",
     "filters": {
       "all": "All",
       "cats": "Cats",
       "dogs": "Dogs",
-      "other": "Other"
+      "other": "Others"
     }
   },
   "profile": {
     "myListings": "My Listings",
     "saved": "Saved",
-    "contributions": "Contributions", 
+    "contributions": "Contributions",
     "settings": "Settings"
   },
   "map": {
@@ -104,5 +121,83 @@
     "locationPermission": "Location Permission",
     "locationPermissionMessage": "Location permission is required to use map features.",
     "tapToAdd": "Tap on a location on the map"
+  },
+  "messages": {
+    "noMessages": "No messages yet",
+    "noMessagesDesc": "Start messaging with other users by clicking the new message button",
+    "newMessage": "New Message",
+    "searchUsers": "Search users...",
+    "usersFound": "users found",
+    "users": "users",
+    "loadingUsers": "Loading users...",
+    "noUsers": "No users yet",
+    "noUsersDesc": "Other users need to register to the app",
+    "userNotFound": "User not found",
+    "now": "Now",
+    "minutesAgo": "min ago",
+    "hoursAgo": "hours ago"
+  },
+  "addPet": {
+    "title": "Add New Listing",
+    "editTitle": "Edit Listing",
+    "loginRequired": "Login Required",
+    "loginRequiredDesc": "You need to login to add a new listing",
+    "loginRequiredEditDesc": "You need to login to edit the listing",
+    "loadingPet": "Loading listing...",
+    "step": "Step",
+    "back": "Back",
+    "next": "Next",
+    "publish": "Publish Listing",
+    "update": "Update",
+    "speciesTitle": "Animal Type",
+    "speciesDesc": "Select the type of animal you want to adopt",
+    "basicInfoTitle": "Basic Information",
+    "basicInfoDesc": "Enter basic information about your animal",
+    "detailsTitle": "Details and Photos",
+    "detailsDesc": "Add city, description and photos",
+    "species": {
+      "cat": "Cat",
+      "dog": "Dog",
+      "bird": "Bird",
+      "rabbit": "Rabbit",
+      "other": "Other"
+    },
+    "name": "Name",
+    "namePlaceholder": "Ex: Luna, Fluffy",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "age": "Age (Months)",
+    "agePlaceholder": "Ex: 12",
+    "size": "Size",
+    "small": "Small",
+    "medium": "Medium",
+    "large": "Large",
+    "breed": "Breed (Optional)",
+    "breedPlaceholder": "Ex: Golden Retriever, Tabby",
+    "city": "City",
+    "cityPlaceholder": "Ex: New York, London",
+    "description": "Description",
+    "descriptionPlaceholder": "Provide detailed information about your animal...",
+    "healthInfo": "Health Information",
+    "vaccinated": "Vaccinated",
+    "neutered": "Neutered",
+    "photos": "Photos",
+    "photosMin": "At least 1",
+    "addPhoto": "Add Photo",
+    "selectSpecies": "Please select animal type",
+    "fillRequired": "Please fill all required fields",
+    "fillCityDesc": "Please enter city and description",
+    "addPhotoRequired": "Please add at least one photo",
+    "success": "Success",
+    "addSuccess": "Pet listing added successfully!",
+    "updateSuccess": "Listing updated successfully!",
+    "addError": "An error occurred while adding the listing",
+    "updateError": "An error occurred while updating the listing",
+    "noPermission": "You don't have permission to edit this listing",
+    "loadError": "An error occurred while loading the listing",
+    "galleryPermission": "Gallery access permission required",
+    "photoError": "An error occurred while uploading photo",
+    "invalidPhotos": "No valid photos found. Please add photos again."
   }
 }
