@@ -140,9 +140,9 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({ visible, onClose
       const ownerInfo = await UserService.getUserById(pet.ownerId);
       const ownerName = (ownerInfo as any)?.displayName || (ownerInfo as any)?.email || 'İlan Sahibi';
       const ownerPhoto = (ownerInfo as any)?.photoURL || '';
-      
+
       const chatId = await MessageService.getOrCreateThread(user.id, pet.ownerId);
-      
+
       onClose();
       router.push({
         pathname: '/chat',
@@ -239,8 +239,10 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({ visible, onClose
             handleContactPress(selectedPet);
           }
         }}
-        onPetUpdate={() => {
-          loadFavoritePets();
+        onPetUpdate={async () => {
+          await loadFavoritePets();
+          setPetDetailVisible(false);
+          setSelectedPet(null);
         }}
       />
     </>

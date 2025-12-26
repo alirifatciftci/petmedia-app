@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -29,6 +28,7 @@ export default function AddScreen() {
   const params = useLocalSearchParams<{ petId?: string }>();
   const { user, isAuthenticated } = useAuthStore();
   const insets = useSafeAreaInsets();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [loading, setLoading] = useState(false);
   const [loadingPet, setLoadingPet] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -565,11 +565,7 @@ export default function AddScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
+      <View style={styles.keyboardView}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <TouchableOpacity
@@ -594,17 +590,19 @@ export default function AddScreen() {
         </View>
 
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
         >
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
         </ScrollView>
 
-        <View style={[styles.footerContainer, { paddingBottom: Math.max(insets.bottom, theme.spacing.md) }]}>
+        <View style={[styles.footerContainer, { paddingBottom: insets.bottom || theme.spacing.md }]}>
           <View style={styles.footer}>
             {step > 1 && (
               <TouchableOpacity
@@ -651,7 +649,7 @@ export default function AddScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -660,6 +658,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background.primary,
+  },
+  keyboardView: {
+    flex: 1,
   },
   content: {
     flex: 1,
@@ -721,7 +722,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl * 2,
+    paddingBottom: theme.spacing.lg,
   },
   stepContainer: {
     width: '100%',
@@ -989,8 +990,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
   },
   button: {

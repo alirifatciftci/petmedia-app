@@ -382,9 +382,12 @@ export default function HomeScreen() {
             handleContactPress(selectedPet);
           }
         }}
-        onPetUpdate={() => {
+        onPetUpdate={async () => {
           // Reload pets after update
-          loadPets();
+          await loadPets();
+          // Close the detail modal to show updated list
+          setPetDetailVisible(false);
+          setSelectedPet(null);
         }}
       />
     </SafeAreaView>

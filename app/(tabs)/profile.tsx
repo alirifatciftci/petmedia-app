@@ -28,6 +28,7 @@ import { EditProfileModal } from '../../components/profile/EditProfileModal';
 import { FavoritesModal } from '../../components/profile/FavoritesModal';
 import { UserProfileService, PetService, MapSpotService } from '../../services/firebase';
 import { PetCard } from '../../components/common/PetCard';
+import { PetDetailModal } from '../../components/common/PetDetailModal';
 import { Pet } from '../../types';
 
 // Fotoğraf URL'sinin geçerli ve kalıcı olup olmadığını kontrol et
@@ -48,6 +49,8 @@ export default function ProfileScreen() {
   const [contributionsCount, setContributionsCount] = useState(0);
   const [loadingCounts, setLoadingCounts] = useState(false);
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
+  const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+  const [petDetailVisible, setPetDetailVisible] = useState(false);
 
   const photoURL = user?.photoURL || '';
   const [imageError, setImageError] = useState(false);
@@ -224,41 +227,17 @@ export default function ProfileScreen() {
         await loadProfileCounts();
 
         // Başarı popup'ı göster
-        Alert.alert('✅ Güncellendi', 'Profil bilgileriniz başarıyla güncellendi!');
+        Alert.alert(`✅ ${t('common.updated')}`, t('common.profileUpdated'));
       } else {
-        Alert.alert('ℹ️ Bilgi', 'Güncellenecek yeni veri bulunamadı.');
+        Alert.alert('ℹ️', t('common.noNewData'));
       }
     } catch (error) {
       console.error('Error refreshing profile:', error);
-      Alert.alert('❌ Hata', 'Profil bilgileri güncellenirken bir hata oluştu.');
+      Alert.alert('❌', t('common.updateError'));
     } finally {
       setRefreshing(false);
     }
   };
-
-  const profileOptions = [
-    {
-      id: 'listings',
-      title: t('profile.myListings'),
-      icon: FileText,
-      count: userPets.length,
-      onPress: () => console.log('My listings'),
-    },
-    {
-      id: 'saved',
-      title: 'Beğenilerim',
-      icon: Heart,
-      count: loadingCounts ? 0 : savedCount,
-      onPress: () => setShowFavoritesModal(true),
-    },
-    {
-      id: 'contributions',
-      title: t('profile.contributions'),
-      icon: MapPin,
-      count: loadingCounts ? 0 : contributionsCount,
-      onPress: () => console.log('Map contributions'),
-    },
-  ];
 
   if (!isAuthenticated) {
     return (
@@ -272,9 +251,9 @@ export default function ProfileScreen() {
               style={styles.loginCard}
             >
               <User size={64} color={theme.colors.primary[500]} strokeWidth={1} />
-              <Text style={styles.loginTitle}>Profilinizi görüntüleyin</Text>
+              <Text style={styles.loginTitle}>{t('profile.viewProfile')}</Text>
               <Text style={styles.loginSubtitle}>
-                Favorilerinizi, ilanlarınızı ve katkılarınızı görmek için giriş yapın
+                {t('profile.loginToSee')}
               </Text>
 
               <TouchableOpacity style={styles.loginButton}>
@@ -282,7 +261,7 @@ export default function ProfileScreen() {
                   colors={[theme.colors.gradient.start, theme.colors.gradient.end]}
                   style={styles.loginGradient}
                 >
-                  <Text style={styles.loginButtonText}>Giriş Yap</Text>
+                  <Text style={styles.loginButtonText}>{t('common.login')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </LinearGradient>
@@ -294,87 +273,124 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
+      <StatusBar style="light" backgroundColor={theme.colors.primary[500]} />
 
       <ScrollView
         style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
             colors={[theme.colors.primary[500]]}
             tintColor={theme.colors.primary[500]}
-            title="Profil güncelleniyor..."
+            title={t('profile.updatingProfile')}
             titleColor={theme.colors.text.secondary}
           />
         }
       >
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          {isValidPhotoURL(photoURL) && !imageError ? (
-            <Image
-              source={{ uri: photoURL }}
-              style={styles.profileAvatar}
-              onError={() => setImageError(true)}
-              onLoadStart={() => setImageError(false)}
-            />
-          ) : (
-            <LinearGradient
-              colors={[theme.colors.primary[400], theme.colors.primary[500]]}
-              style={styles.avatar}
-            >
-              <User size={44} color="white" />
-            </LinearGradient>
-          )}
+        {/* Profile Header with Gradient */}
+        <LinearGradient
+          colors={[theme.colors.primary[500], theme.colors.primary[400]]}
+          style={styles.headerGradient}
+        >
+          <View style={styles.profileHeader}>
+            {isValidPhotoURL(photoURL) && !imageError ? (
+              <View style={styles.avatarContainer}>
+                <Image
+                  source={{ uri: photoURL }}
+                  style={styles.profileAvatar}
+                  onError={() => setImageError(true)}
+                  onLoadStart={() => setImageError(false)}
+                />
+              </View>
+            ) : (
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatar}>
+                  <User size={48} color={theme.colors.primary[500]} />
+                </View>
+              </View>
+            )}
 
-          <Text style={styles.displayName}>
-            {user?.displayName || user?.email?.split('@')[0] || 'Pet Lover'}
-          </Text>
+            <Text style={styles.displayName}>
+              {user?.displayName || user?.email?.split('@')[0] || 'Pet Lover'}
+            </Text>
 
-          {user?.email && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoEmoji}>📧</Text>
+            {user?.email && (
               <Text style={styles.email}>{user.email}</Text>
-            </View>
-          )}
+            )}
 
-          {user?.city && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoEmoji}>📍</Text>
-              <Text style={styles.location}>{user.city}</Text>
-            </View>
-          )}
+            {user?.city && (
+              <View style={styles.locationBadge}>
+                <MapPin size={14} color="white" />
+                <Text style={styles.locationText}>{user.city}</Text>
+              </View>
+            )}
+          </View>
+        </LinearGradient>
 
-          {user?.bio && (
-            <View style={styles.bioContainer}>
-              <Text style={styles.bioLabel}>💬 Hakkımda</Text>
-              <Text style={styles.bio}>{user.bio}</Text>
-            </View>
-          )}
+        {/* Stats Cards */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statsRow}>
+            <TouchableOpacity style={styles.statCard} onPress={() => console.log('My listings')}>
+              <View style={[styles.statIconContainer, { backgroundColor: theme.colors.primary[100] }]}>
+                <FileText size={24} color={theme.colors.primary[500]} />
+              </View>
+              <Text style={styles.statNumber}>{userPets.length}</Text>
+              <Text style={styles.statLabel}>{t('profile.myListings')}</Text>
+            </TouchableOpacity>
 
+            <TouchableOpacity style={styles.statCard} onPress={() => setShowFavoritesModal(true)}>
+              <View style={[styles.statIconContainer, { backgroundColor: '#FEE2E2' }]}>
+                <Heart size={24} color="#EF4444" />
+              </View>
+              <Text style={styles.statNumber}>{loadingCounts ? 0 : savedCount}</Text>
+              <Text style={styles.statLabel}>{t('profile.favorites')}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.statCard} onPress={() => console.log('Map contributions')}>
+              <View style={[styles.statIconContainer, { backgroundColor: '#D1FAE5' }]}>
+                <MapPin size={24} color="#10B981" />
+              </View>
+              <Text style={styles.statNumber}>{loadingCounts ? 0 : contributionsCount}</Text>
+              <Text style={styles.statLabel}>{t('profile.contributions')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Bio Section */}
+        {user?.bio && (
+          <View style={styles.bioSection}>
+            <Text style={styles.bioTitle}>{t('profile.aboutMe')}</Text>
+            <Text style={styles.bioText}>{user.bio}</Text>
+          </View>
+        )}
+
+        {/* Edit Profile Button */}
+        <View style={styles.editButtonContainer}>
           <TouchableOpacity
             style={styles.editProfileButton}
-            onPress={() => {
-              console.log('Edit profile button pressed');
-              setShowEditModal(true);
-            }}
+            onPress={() => setShowEditModal(true)}
             activeOpacity={0.8}
           >
-            <Text style={styles.editProfileText}>✏️ Profil Bilgilerini Düzenle</Text>
+            <Text style={styles.editProfileText}>{t('profile.editProfile')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* User's Pets */}
         {userPets.length > 0 && (
           <View style={styles.petsSection}>
-            <Text style={styles.sectionTitle}>İlanlarım ({userPets.length})</Text>
+            <Text style={styles.sectionTitle}>{t('profile.myListings')}</Text>
             <View style={styles.petsGrid}>
               {userPets.map((pet) => (
                 <View key={pet.id} style={styles.petCardWrapper}>
                   <PetCard
                     pet={pet as Pet}
                     isFavorite={false}
-                    onPress={() => console.log('Pet pressed:', pet.id)}
+                    onPress={() => {
+                      setSelectedPet(pet as Pet);
+                      setPetDetailVisible(true);
+                    }}
                     onFavoritePress={() => { }}
                   />
                 </View>
@@ -383,66 +399,29 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Profile Options */}
-        <View style={styles.optionsContainer}>
-          <View style={styles.optionsCard}>
-            {profileOptions.map((option, index) => (
-              <TouchableOpacity
-                key={option.id}
-                style={[
-                  styles.optionItem,
-                  index === profileOptions.length - 1 && styles.optionItemLast
-                ]}
-                onPress={option.onPress}
-                activeOpacity={0.7}
-              >
-                <View style={styles.optionLeft}>
-                  <View style={styles.optionIcon}>
-                    <option.icon size={22} color={theme.colors.primary[500]} strokeWidth={2} />
-                  </View>
-                  <Text style={styles.optionTitle}>{option.title}</Text>
-                </View>
-                <View style={styles.optionRight}>
-                  <View style={styles.countBadge}>
-                    <Text style={styles.optionCount}>{option.count}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+        {/* Settings & Logout */}
+        <View style={styles.settingsSection}>
+          <TouchableOpacity
+            style={styles.settingsItem}
+            onPress={() => console.log('Settings')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingsIconContainer}>
+              <Settings size={22} color={theme.colors.text.secondary} />
+            </View>
+            <Text style={styles.settingsText}>{t('profile.settings')}</Text>
+          </TouchableOpacity>
 
-          {/* Settings & Logout */}
-          <View style={styles.settingsCard}>
-            <TouchableOpacity
-              style={styles.settingsItem}
-              onPress={() => console.log('Settings')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.optionLeft}>
-                <View style={[styles.optionIcon, styles.settingsIcon]}>
-                  <Settings size={22} color={theme.colors.text.secondary} strokeWidth={2} />
-                </View>
-                <Text style={styles.optionTitle}>{t('profile.settings')}</Text>
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.divider} />
-
-            <TouchableOpacity
-              style={styles.settingsItem}
-              onPress={logout}
-              activeOpacity={0.7}
-            >
-              <View style={styles.optionLeft}>
-                <View style={[styles.optionIcon, styles.logoutIcon]}>
-                  <LogOut size={22} color={theme.colors.error[500]} strokeWidth={2} />
-                </View>
-                <Text style={[styles.optionTitle, styles.logoutText]}>
-                  {t('common.logout')}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.logoutItem}
+            onPress={logout}
+            activeOpacity={0.7}
+          >
+            <View style={styles.logoutIconContainer}>
+              <LogOut size={22} color={theme.colors.error[500]} />
+            </View>
+            <Text style={styles.logoutText}>{t('common.logout')}</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -459,6 +438,23 @@ export default function ProfileScreen() {
           loadProfileCounts();
         }}
       />
+
+      <PetDetailModal
+        visible={petDetailVisible}
+        onClose={() => setPetDetailVisible(false)}
+        pet={selectedPet}
+        isFavorite={false}
+        currentUserId={user?.id || null}
+        onPetUpdate={async () => {
+          // Reload user pets after update
+          if (user?.id) {
+            const pets = await PetService.getUserPets(user.id);
+            setUserPets(pets as Pet[]);
+          }
+          setPetDetailVisible(false);
+          setSelectedPet(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -466,7 +462,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background.primary,
+    backgroundColor: '#F8F9FA',
   },
   scrollView: {
     flex: 1,
@@ -522,189 +518,151 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.fontFamily.bodySemiBold,
     fontSize: theme.typography.fontSize.base,
   },
+  headerGradient: {
+    paddingTop: theme.spacing.xl,
+    paddingBottom: 60,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
   profileHeader: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
     paddingHorizontal: theme.spacing.lg,
-    backgroundColor: theme.colors.background.primary,
+  },
+  avatarContainer: {
+    padding: 4,
+    borderRadius: 65,
+    backgroundColor: 'rgba(255,255,255,0.3)',
     marginBottom: theme.spacing.md,
   },
   avatar: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.spacing.lg,
-    borderWidth: 3,
-    borderColor: theme.colors.primary[300],
+    backgroundColor: 'white',
+  },
+  profileAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: 'white',
   },
   displayName: {
-    fontSize: 24,
+    fontSize: 26,
     fontFamily: theme.typography.fontFamily.bodyBold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    color: 'white',
     marginBottom: theme.spacing.xs,
-    gap: theme.spacing.sm,
-  },
-  infoEmoji: {
-    fontSize: 16,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   email: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: theme.typography.fontFamily.body,
-    color: theme.colors.text.secondary,
+    color: 'rgba(255,255,255,0.9)',
+    marginBottom: theme.spacing.sm,
   },
-  location: {
-    fontSize: 15,
-    fontFamily: theme.typography.fontFamily.body,
-    color: theme.colors.text.secondary,
-  },
-  optionsContainer: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-    paddingBottom: 100,
-  },
-  optionsCard: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: 20,
-    marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    overflow: 'hidden',
-  },
-  optionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
-  },
-  optionItemLast: {
-    borderBottomWidth: 0,
-  },
-  optionLeft: {
+  locationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-  },
-  optionIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: theme.colors.primary[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  settingsIcon: {
-    backgroundColor: theme.colors.background.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-  },
-  logoutIcon: {
-    backgroundColor: theme.colors.error[50],
-  },
-  optionTitle: {
-    fontSize: 15,
-    fontFamily: theme.typography.fontFamily.bodySemiBold,
-    color: theme.colors.text.primary,
-    flex: 1,
-  },
-  optionRight: {
-    marginLeft: theme.spacing.sm,
-  },
-  countBadge: {
-    backgroundColor: theme.colors.primary[100],
+    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    minWidth: 36,
+    gap: 6,
+  },
+  locationText: {
+    fontSize: 13,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    color: 'white',
+  },
+  statsContainer: {
+    marginTop: -40,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: theme.spacing.sm,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: theme.spacing.md,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: theme.spacing.sm,
   },
-  optionCount: {
-    fontSize: 14,
+  statNumber: {
+    fontSize: 22,
     fontFamily: theme.typography.fontFamily.bodyBold,
-    color: theme.colors.primary[600],
+    color: theme.colors.text.primary,
   },
-  settingsCard: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: 20,
-    marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    overflow: 'hidden',
+  statLabel: {
+    fontSize: 11,
+    fontFamily: theme.typography.fontFamily.body,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    marginTop: 2,
   },
-  settingsItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: 16,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border.light,
+  bioSection: {
     marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: theme.spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  logoutText: {
-    color: theme.colors.error[500],
+  bioTitle: {
+    fontSize: 14,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.sm,
+  },
+  bioText: {
+    fontSize: 15,
+    fontFamily: theme.typography.fontFamily.body,
+    color: theme.colors.text.primary,
+    lineHeight: 22,
+  },
+  editButtonContainer: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
   },
   editProfileButton: {
     backgroundColor: theme.colors.primary[500],
-    paddingHorizontal: 28,
     paddingVertical: 14,
-    borderRadius: 50,
-    marginTop: theme.spacing.lg,
+    borderRadius: 12,
     shadowColor: theme.colors.primary[500],
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 4,
   },
   editProfileText: {
     color: 'white',
     fontSize: 15,
     fontFamily: theme.typography.fontFamily.bodySemiBold,
     textAlign: 'center',
-  },
-  profileAvatar: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: theme.colors.primary[300],
-    marginBottom: theme.spacing.lg,
-  },
-  bioContainer: {
-    marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    width: '100%',
-  },
-  bioLabel: {
-    fontSize: 13,
-    fontFamily: theme.typography.fontFamily.bodySemiBold,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xs,
-    textAlign: 'center',
-  },
-  bio: {
-    fontSize: 14,
-    fontFamily: theme.typography.fontFamily.body,
-    color: theme.colors.text.primary,
-    textAlign: 'center',
-    lineHeight: 22,
   },
   petsSection: {
     paddingHorizontal: theme.spacing.lg,
@@ -724,5 +682,60 @@ const styles = StyleSheet.create({
   petCardWrapper: {
     width: '48%',
     marginBottom: theme.spacing.md,
+  },
+  settingsSection: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: 100,
+  },
+  settingsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: theme.spacing.md,
+    borderRadius: 12,
+    marginBottom: theme.spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  settingsIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  settingsText: {
+    fontSize: 15,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    color: theme.colors.text.primary,
+  },
+  logoutItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: theme.spacing.md,
+    borderRadius: 12,
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+  },
+  logoutIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.error[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  logoutText: {
+    fontSize: 15,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    color: theme.colors.error[500],
   },
 });

@@ -8,16 +8,16 @@ import {
   Image,
   Dimensions,
   ScrollView,
-  FlatList,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, MapPin, Calendar, Heart, Shield, User, Play, Camera, Video, Edit, MessageCircle } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { X, MapPin, Calendar, Heart, Shield, User, Edit, MessageCircle } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme';
 import { Pet } from '../../types';
 import { MediaGalleryModal } from './MediaGalleryModal';
 import { EditPetModal } from '../pet/EditPetModal';
+import { Camera } from 'lucide-react-native';
 
 interface PetDetailModalProps {
   visible: boolean;
@@ -40,7 +40,7 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
   onContactPress,
   onPetUpdate
 }) => {
-  const router = useRouter();
+  const { t } = useTranslation();
   const [mediaGalleryVisible, setMediaGalleryVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
 
@@ -53,11 +53,6 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
 
   const isOwner = currentUserId && pet.ownerId === currentUserId;
 
-  const allMedia = [
-    ...pet.photos.map(photo => ({ type: 'photo' as const, url: photo })),
-    ...pet.videos.map(video => ({ type: 'video' as const, url: video }))
-  ];
-
   const getSpeciesEmoji = (species: string) => {
     switch (species) {
       case 'dog': return '🐕';
@@ -68,15 +63,15 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
 
   const getSizeText = (size: string) => {
     switch (size) {
-      case 'small': return 'Küçük';
-      case 'medium': return 'Orta';
-      case 'large': return 'Büyük';
+      case 'small': return t('petDetail.small');
+      case 'medium': return t('petDetail.medium');
+      case 'large': return t('petDetail.large');
       default: return size;
     }
   };
 
   const getSexText = (sex: string) => {
-    return sex === 'male' ? 'Erkek' : 'Dişi';
+    return sex === 'male' ? t('petDetail.male') : t('petDetail.female');
   };
 
   return (
@@ -108,14 +103,16 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
                 <X size={22} color={theme.colors.text.primary} />
               </TouchableOpacity>
 
-              {/* Favorite Button */}
-              <TouchableOpacity style={styles.favoriteButton} onPress={onFavoritePress}>
-                <Heart
-                  size={22}
-                  color={isFavorite ? '#EF4444' : theme.colors.text.secondary}
-                  fill={isFavorite ? '#EF4444' : 'transparent'}
-                />
-              </TouchableOpacity>
+              {/* Favorite Button - only show if not owner */}
+              {!isOwner && (
+                <TouchableOpacity style={styles.favoriteButton} onPress={onFavoritePress}>
+                  <Heart
+                    size={22}
+                    color={isFavorite ? '#EF4444' : theme.colors.text.secondary}
+                    fill={isFavorite ? '#EF4444' : 'transparent'}
+                  />
+                </TouchableOpacity>
+              )}
 
               {/* Pet Name Overlay */}
               <View style={styles.nameOverlay}>
@@ -128,7 +125,7 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
             </View>
 
             {/* Content */}
-            <View style={styles.contentArea}>
+            <ScrollView style={styles.contentArea} showsVerticalScrollIndicator={true}>
               {/* Media Gallery Button */}
               <TouchableOpacity style={styles.mediaGalleryButton} onPress={() => {
                 setMediaGalleryVisible(true);
@@ -136,9 +133,9 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
                 <View style={styles.mediaGalleryButtonContent}>
                   <Camera size={24} color={theme.colors.primary[500]} />
                   <View style={styles.mediaGalleryButtonTextContainer}>
-                    <Text style={styles.mediaGalleryButtonTitle}>Medya Galerisi</Text>
+                    <Text style={styles.mediaGalleryButtonTitle}>{t('petDetail.mediaGallery')}</Text>
                     <Text style={styles.mediaGalleryButtonSubtitle}>
-                      {pet.photos.length} fotoğraf, {pet.videos.length} video
+                      {pet.photos.length} {t('petDetail.photos')}, {pet.videos.length} {t('petDetail.videos')}
                     </Text>
                   </View>
                   <View style={styles.mediaGalleryButtonArrow}>
@@ -149,21 +146,21 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
 
               {/* Basic Info */}
               <View style={styles.infoSection}>
-                <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
+                <Text style={styles.sectionTitle}>{t('petDetail.basicInfo')}</Text>
                 <View style={styles.infoGrid}>
                   <View style={styles.infoItem}>
                     <Calendar size={20} color={theme.colors.primary[500]} />
-                    <Text style={styles.infoLabel}>Yaş</Text>
-                    <Text style={styles.infoValue}>{pet.ageMonths} ay</Text>
+                    <Text style={styles.infoLabel}>{t('petDetail.age')}</Text>
+                    <Text style={styles.infoValue}>{pet.ageMonths} {t('petDetail.months')}</Text>
                   </View>
                   <View style={styles.infoItem}>
                     <User size={20} color={theme.colors.primary[500]} />
-                    <Text style={styles.infoLabel}>Cinsiyet</Text>
+                    <Text style={styles.infoLabel}>{t('petDetail.gender')}</Text>
                     <Text style={styles.infoValue}>{getSexText(pet.sex)}</Text>
                   </View>
                   <View style={styles.infoItem}>
                     <Shield size={20} color={theme.colors.primary[500]} />
-                    <Text style={styles.infoLabel}>Boyut</Text>
+                    <Text style={styles.infoLabel}>{t('petDetail.size')}</Text>
                     <Text style={styles.infoValue}>{getSizeText(pet.size)}</Text>
                   </View>
                 </View>
@@ -171,7 +168,7 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
 
               {/* Location */}
               <View style={styles.infoSection}>
-                <Text style={styles.sectionTitle}>Konum</Text>
+                <Text style={styles.sectionTitle}>{t('petDetail.location')}</Text>
                 <View style={styles.locationContainer}>
                   <MapPin size={20} color={theme.colors.primary[500]} />
                   <Text style={styles.locationText}>{pet.city}</Text>
@@ -180,16 +177,16 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
 
               {/* Health Status */}
               <View style={styles.infoSection}>
-                <Text style={styles.sectionTitle}>Sağlık Durumu</Text>
+                <Text style={styles.sectionTitle}>{t('petDetail.healthStatus')}</Text>
                 <View style={styles.healthGrid}>
                   <View style={[styles.healthItem, pet.vaccinated && styles.healthItemActive]}>
                     <Text style={[styles.healthText, pet.vaccinated && styles.healthTextActive]}>
-                      {pet.vaccinated ? '✅' : '❌'} Aşılı
+                      {pet.vaccinated ? '✅' : '❌'} {t('petDetail.vaccinated')}
                     </Text>
                   </View>
                   <View style={[styles.healthItem, pet.neutered && styles.healthItemActive]}>
                     <Text style={[styles.healthText, pet.neutered && styles.healthTextActive]}>
-                      {pet.neutered ? '✅' : '❌'} Kısırlaştırılmış
+                      {pet.neutered ? '✅' : '❌'} {t('petDetail.neutered')}
                     </Text>
                   </View>
                 </View>
@@ -197,14 +194,14 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
 
               {/* Description */}
               <View style={styles.infoSection}>
-                <Text style={styles.sectionTitle}>Hakkında</Text>
+                <Text style={styles.sectionTitle}>{t('petDetail.about')}</Text>
                 <Text style={styles.description}>{pet.description}</Text>
               </View>
 
               {/* Tags */}
               {pet.tags && pet.tags.length > 0 && (
                 <View style={styles.infoSection}>
-                  <Text style={styles.sectionTitle}>Özellikler</Text>
+                  <Text style={styles.sectionTitle}>{t('petDetail.features')}</Text>
                   <View style={styles.tagsContainer}>
                     {pet.tags.map((tag, index) => (
                       <View key={index} style={styles.tag}>
@@ -229,7 +226,7 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
                       style={styles.editGradient}
                     >
                       <Edit size={20} color="white" style={styles.buttonIcon} />
-                      <Text style={styles.editText}>İlanı Düzenle</Text>
+                      <Text style={styles.editText}>{t('petDetail.editListing')}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 ) : (
@@ -247,12 +244,12 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
                       style={styles.contactGradient}
                     >
                       <MessageCircle size={20} color="white" style={styles.buttonIcon} />
-                      <Text style={styles.contactText}>İletişime Geç</Text>
+                      <Text style={styles.contactText}>{t('petDetail.contact')}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
               </View>
-            </View>
+            </ScrollView>
           </View>
         </View>
       </BlurView>
@@ -274,7 +271,7 @@ export const PetDetailModal: React.FC<PetDetailModalProps> = ({
           setEditModalVisible(false);
         }}
       />
-    </Modal>
+    </Modal >
   );
 };
 

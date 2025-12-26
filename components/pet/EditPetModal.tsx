@@ -32,7 +32,7 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  
+
   // Form state
   const [name, setName] = useState('');
   const [sex, setSex] = useState<PetSex | ''>('');
@@ -64,11 +64,11 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
   const handleImagePicker = async () => {
     try {
       console.log('Photo upload started');
-      
+
       // İzin iste
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       console.log('Permission result:', permissionResult);
-      
+
       if (permissionResult.granted === false) {
         Alert.alert('Hata', 'Galeri erişim izni gerekli');
         return;
@@ -81,29 +81,29 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
         allowsMultipleSelection: true,
         quality: 0.8, // Same quality as profile photo
       });
-      
+
       console.log('Image picker result:', result);
 
       if (!result.canceled && result.assets) {
         console.log(`Selected ${result.assets.length} images`);
         setIsUploadingPhoto(true);
-        
+
         // Her fotoğrafı işle (profil kısmındaki gibi - Firebase Storage'a yükle, başarısız olursa local URI kullan)
         const newPhotoURLs: string[] = [];
-        
+
         for (let i = 0; i < result.assets.length; i++) {
           const asset = result.assets[i];
           console.log(`Processing image ${i + 1}:`, asset.uri);
-          
+
           try {
             // Firebase Storage'a yükle
             const imagePath = `pets/${user!.id}/photo_${Date.now()}_${i}.jpg`;
             const downloadURL = await FirebaseStorage.uploadImage(imagePath, asset.uri);
-            
+
             if (!downloadURL || downloadURL.trim().length === 0) {
               throw new Error('Invalid download URL received');
             }
-            
+
             newPhotoURLs.push(downloadURL);
             console.log(`Image ${i + 1} uploaded successfully, URL: ${downloadURL}`);
           } catch (storageError) {
@@ -113,7 +113,7 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
             console.log(`Image ${i + 1} using local URI: ${asset.uri}`);
           }
         }
-        
+
         // Tüm URL'leri state'e ekle (profil kısmındaki gibi)
         if (newPhotoURLs.length > 0) {
           setPhotos([...photos, ...newPhotoURLs]);
@@ -151,18 +151,18 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
     try {
       // Photos are already uploaded to Firebase Storage in handleImagePicker (profil kısmındaki gibi)
       // Just validate and use them directly
-      
+
       // Validate all photos are valid URLs
-      const validPhotos = photos.filter(photo => 
+      const validPhotos = photos.filter(photo =>
         photo && typeof photo === 'string' && photo.trim().length > 0
       );
-      
+
       if (validPhotos.length === 0) {
         Alert.alert('Hata', 'Geçerli fotoğraf bulunamadı. Lütfen tekrar fotoğraf ekleyin.');
         setIsLoading(false);
         return;
       }
-      
+
       console.log('Using photos (already URLs), count:', validPhotos.length);
 
       // Update pet data - only update fields that are provided
@@ -194,16 +194,19 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
       console.log('EditPetModal: Pet data to update:', petData);
 
       await PetService.updatePet(pet.id, petData);
-      
-      Alert.alert('Başarılı', 'İlan başarıyla güncellendi!', [
-        {
-          text: 'Tamam',
-          onPress: () => {
-            if (onUpdate) onUpdate();
-            onClose();
-          },
-        },
-      ]);
+
+      console.log('EditPetModal: Pet updated successfully, calling onUpdate');
+
+      // First call onUpdate to refresh the list
+      if (onUpdate) {
+        onUpdate();
+      }
+
+      // Then close the modal
+      onClose();
+
+      // Show success message
+      Alert.alert('Başarılı', 'İlan başarıyla güncellendi!');
     } catch (error) {
       console.error('EditPetModal: Error updating pet:', error);
       const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
@@ -230,7 +233,8 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.container}
+          style={styles.keyboardView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -238,8 +242,8 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
               <X size={24} color={theme.colors.text.primary} />
             </TouchableOpacity>
             <Text style={styles.title}>İlanı Düzenle</Text>
-            <TouchableOpacity 
-              onPress={handleSave} 
+            <TouchableOpacity
+              onPress={handleSave}
               style={styles.saveButton}
               disabled={isLoading}
             >
@@ -397,9 +401,9 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosContainer}>
                 {photos.map((photo, index) => (
                   <View key={index} style={styles.photoItem}>
-                    <Image 
-                      source={{ uri: photo }} 
-                      style={styles.photo} 
+                    <Image
+                      source={{ uri: photo }}
+                      style={styles.photo}
                     />
                     <TouchableOpacity
                       style={styles.removePhotoButton}
@@ -409,8 +413,8 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
                     </TouchableOpacity>
                   </View>
                 ))}
-                <TouchableOpacity 
-                  style={[styles.addPhotoButton, isUploadingPhoto && styles.addPhotoButtonDisabled]} 
+                <TouchableOpacity
+                  style={[styles.addPhotoButton, isUploadingPhoto && styles.addPhotoButtonDisabled]}
                   onPress={handleImagePicker}
                   disabled={isUploadingPhoto}
                 >
@@ -436,6 +440,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background.primary,
+  },
+  keyboardView: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

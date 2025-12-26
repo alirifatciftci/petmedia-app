@@ -19,9 +19,9 @@ export const colors = {
 
   // Soft cream background from references
   background: {
-    primary: '#faf7f0', // Soft cream
-    secondary: '#ffffff',
-    tertiary: '#f8f9fa',
+    primary: '#ffffff', // White
+    secondary: '#f8f9fa', // Light gray
+    tertiary: '#f3f4f6', // Slightly darker gray
   },
 
   // Feature card colors from references
