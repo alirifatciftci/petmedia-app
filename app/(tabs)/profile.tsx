@@ -49,6 +49,8 @@ export default function ProfileScreen() {
   const [loadingCounts, setLoadingCounts] = useState(false);
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
   const [showContributionsModal, setShowContributionsModal] = useState(false);
+  const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+  const [petDetailVisible, setPetDetailVisible] = useState(false);
 
   const photoURL = user?.photoURL || '';
   const [imageError, setImageError] = useState(false);
