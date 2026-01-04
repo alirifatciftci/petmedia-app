@@ -89,6 +89,8 @@
         "saved": "Saved",
         "favorites": "Favorites",
         "contributions": "Contributions",
+        "noContributions": "No contributions yet",
+        "noContributionsDesc": "Spots you add to the map will appear here",
         "settings": "Settings",
         "viewProfile": "View your profile",
         "loginToSee": "Login to see your favorites, listings and contributions",
@@ -131,7 +133,9 @@
         "errorContributing": "An error occurred while contributing.",
         "locationPermission": "Location Permission",
         "locationPermissionMessage": "Location permission is required to use map features.",
-        "tapToAdd": "Tap on a location on the map"
+        "tapToAdd": "Tap on a location on the map",
+        "unnamedSpot": "Unnamed Spot",
+        "spot": "Spot"
     },
     "messages": {
         "noMessages": "No messages yet",

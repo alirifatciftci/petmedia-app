@@ -89,6 +89,8 @@
         "saved": "Kaydedilenler",
         "favorites": "Beğenilerim",
         "contributions": "Katkılarım",
+        "noContributions": "Henüz katkı yok",
+        "noContributionsDesc": "Haritaya eklediğiniz noktalar burada görünecek",
         "settings": "Ayarlar",
         "viewProfile": "Profilinizi görüntüleyin",
         "loginToSee": "Favorilerinizi, ilanlarınızı ve katkılarınızı görmek için giriş yapın",
@@ -131,7 +133,9 @@
         "errorContributing": "Katkıda bulunurken bir hata oluştu.",
         "locationPermission": "Konum İzni",
         "locationPermissionMessage": "Harita özelliklerini kullanabilmek için konum izni gereklidir.",
-        "tapToAdd": "Haritada bir yere dokunun"
+        "tapToAdd": "Haritada bir yere dokunun",
+        "unnamedSpot": "İsimsiz Nokta",
+        "spot": "Nokta"
     },
     "messages": {
         "noMessages": "Henüz mesaj yok",

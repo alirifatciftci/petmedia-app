@@ -39,7 +39,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user, setUser } = useAuthStore();
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'cat' | 'dog' | 'other'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'cat' | 'dog' | 'other' | 'favorites'>('all');
   const [modalVisible, setModalVisible] = useState(false);
   const [modalContent, setModalContent] = useState({
     title: '',
@@ -145,7 +145,39 @@ export default function HomeScreen() {
     setLoadingPets(true);
     try {
       let loadedPets: Pet[];
-      if (selectedFilter === 'all') {
+
+      if (selectedFilter === 'favorites') {
+        // Favoriler için: kullanıcının favori listesindeki petleri yükle
+        if (!user?.id) {
+          setPets([]);
+          setLoadingPets(false);
+          return;
+        }
+
+        // Firestore'dan güncel favorileri al
+        const profileData = await UserProfileService.getUserProfile(user.id);
+        const favoriteIds = profileData?.favorites || user.favorites || [];
+
+        if (favoriteIds.length === 0) {
+          setPets([]);
+          setLoadingPets(false);
+          return;
+        }
+
+        // Her favori pet'i yükle
+        const petPromises = favoriteIds.map(async (petId: string) => {
+          try {
+            const pet = await PetService.getPet(petId);
+            return pet as Pet;
+          } catch (error) {
+            console.error(`Error loading favorite pet ${petId}:`, error);
+            return null;
+          }
+        });
+
+        const pets = await Promise.all(petPromises);
+        loadedPets = pets.filter((pet): pet is Pet => pet !== null);
+      } else if (selectedFilter === 'all') {
         loadedPets = await PetService.getAllPets() as Pet[];
       } else {
         loadedPets = await PetService.getPetsBySpecies(selectedFilter) as Pet[];
@@ -157,7 +189,7 @@ export default function HomeScreen() {
     } finally {
       setLoadingPets(false);
     }
-  }, [selectedFilter]);
+  }, [selectedFilter, user?.id, user?.favorites]);
 
   React.useEffect(() => {
     loadPets();
@@ -171,6 +203,10 @@ export default function HomeScreen() {
   );
 
   const filteredPets = pets.filter(pet => {
+    // Favoriler zaten loadPets'te filtrelendi
+    if (selectedFilter === 'favorites') {
+      return true;
+    }
     const matchesFilter = selectedFilter === 'all' || pet.species === selectedFilter;
     return matchesFilter;
   });
@@ -303,32 +339,49 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>{t('home.title')}</Text>
 
           {/* Filter Buttons */}
-          <View style={styles.filterContainer}>
-            {[
-              { key: 'all', label: t('home.filters.all') },
-              { key: 'cat', label: t('home.filters.cats') },
-              { key: 'dog', label: t('home.filters.dogs') },
-              { key: 'other', label: t('home.filters.other') }
-            ].map((filter) => (
-              <TouchableOpacity
-                key={filter.key}
-                style={[
-                  styles.filterButton,
-                  selectedFilter === filter.key && styles.filterButtonActive,
-                ]}
-                onPress={() => setSelectedFilter(filter.key as any)}
-              >
-                <Text
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScrollContent}
+          >
+            <View style={styles.filterContainer}>
+              {[
+                { key: 'all', label: t('home.filters.all') },
+                { key: 'cat', label: t('home.filters.cats') },
+                { key: 'dog', label: t('home.filters.dogs') },
+                { key: 'other', label: t('home.filters.other') },
+                { key: 'favorites', label: t('profile.favorites') }
+              ].map((filter) => (
+                <TouchableOpacity
+                  key={filter.key}
                   style={[
-                    styles.filterText,
-                    selectedFilter === filter.key && styles.filterTextActive,
+                    styles.filterButton,
+                    selectedFilter === filter.key && styles.filterButtonActive,
+                    filter.key === 'favorites' && styles.filterButtonFavorites,
+                    filter.key === 'favorites' && selectedFilter === filter.key && styles.filterButtonFavoritesActive,
                   ]}
+                  onPress={() => setSelectedFilter(filter.key as any)}
                 >
-                  {filter.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  {filter.key === 'favorites' && (
+                    <Heart
+                      size={14}
+                      color={selectedFilter === 'favorites' ? 'white' : '#EF4444'}
+                      fill={selectedFilter === 'favorites' ? 'white' : '#EF4444'}
+                      style={{ marginRight: 4 }}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.filterText,
+                      selectedFilter === filter.key && styles.filterTextActive,
+                    ]}
+                  >
+                    {filter.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
         </View>
 
         {/* Pets Grid */}
@@ -496,7 +549,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing.sm,
   },
+  filterScrollContent: {
+    paddingRight: theme.spacing.lg,
+  },
   filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.borderRadius.full,
@@ -507,6 +565,14 @@ const styles = StyleSheet.create({
   filterButtonActive: {
     backgroundColor: theme.colors.primary[500],
     borderColor: theme.colors.primary[500],
+  },
+  filterButtonFavorites: {
+    borderColor: '#FEE2E2',
+    backgroundColor: '#FEF2F2',
+  },
+  filterButtonFavoritesActive: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
   },
   filterText: {
     fontSize: theme.typography.fontSize.sm,

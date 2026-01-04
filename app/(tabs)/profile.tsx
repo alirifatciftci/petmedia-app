@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,27 @@ import {
   Image,
   RefreshControl,
   Alert,
+  Modal,
+  FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import {
   User,
   Heart,
   FileText,
   MapPin,
-  LogOut
+  LogOut,
+  X,
+  Droplets,
+  Home,
+  Stethoscope,
+  Shield,
 } from 'lucide-react-native';
 import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
@@ -37,10 +46,68 @@ const isValidPhotoURL = (url: string | null | undefined): boolean => {
   return url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://');
 };
 
+// Spot tipine göre ikon döndür
+const getSpotIcon = (type: string, size: number = 20) => {
+  switch (type) {
+    case 'water':
+      return <Droplets size={size} color="white" />;
+    case 'food':
+      return <Heart size={size} color="white" />;
+    case 'both':
+      return <Home size={size} color="white" />;
+    case 'veterinary':
+      return <Stethoscope size={size} color="white" />;
+    case 'shelter':
+      return <Shield size={size} color="white" />;
+    default:
+      return <MapPin size={size} color="white" />;
+  }
+};
+
+// Spot tipine göre renk döndür
+const getSpotColor = (type: string): string => {
+  switch (type) {
+    case 'water':
+      return '#3b82f6';
+    case 'food':
+      return '#f97316';
+    case 'both':
+      return '#8b5cf6';
+    case 'veterinary':
+      return '#10b981';
+    case 'shelter':
+      return '#f59e0b';
+    default:
+      return '#6b7280';
+  }
+};
+
+// Spot tipine göre label döndür
+const getSpotLabel = (type: string, t: any): string => {
+  switch (type) {
+    case 'water':
+      return t('map.water');
+    case 'food':
+      return t('map.food');
+    case 'both':
+      return t('map.both');
+    case 'veterinary':
+      return t('map.veterinary');
+    case 'shelter':
+      return t('map.shelter');
+    default:
+      return t('map.spot');
+  }
+};
+
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const { user, isAuthenticated, logout, setUser } = useAuthStore();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const petsSectionY = useRef<number>(0);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showContributionsModal, setShowContributionsModal] = useState(false);
+  const [userContributions, setUserContributions] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [userPets, setUserPets] = useState<Pet[]>([]);
   const [loadingPets, setLoadingPets] = useState(false);
@@ -81,6 +148,27 @@ export default function ProfileScreen() {
       setLoadingPets(false);
     }
   }, [user?.id]);
+
+  const loadUserContributions = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const spots = await MapSpotService.getUserMapSpots(user.id);
+      setUserContributions(spots);
+    } catch (error) {
+      console.error('Error loading contributions:', error);
+    }
+  }, [user?.id]);
+
+  const scrollToListings = () => {
+    if (petsSectionY.current > 0) {
+      scrollViewRef.current?.scrollTo({ y: petsSectionY.current - 20, animated: true });
+    }
+  };
+
+  const handleContributionsPress = async () => {
+    await loadUserContributions();
+    setShowContributionsModal(true);
+  };
 
   const loadProfileCounts = useCallback(async () => {
     if (!user?.id) return;
@@ -275,6 +363,7 @@ export default function ProfileScreen() {
       <StatusBar style="light" backgroundColor={theme.colors.primary[500]} />
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -331,7 +420,7 @@ export default function ProfileScreen() {
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={styles.statsRow}>
-            <TouchableOpacity style={styles.statCard} onPress={() => console.log('My listings')}>
+            <TouchableOpacity style={styles.statCard} onPress={scrollToListings} activeOpacity={0.7}>
               <View style={[styles.statIconContainer, { backgroundColor: theme.colors.primary[100] }]}>
                 <FileText size={24} color={theme.colors.primary[500]} />
               </View>
@@ -339,7 +428,7 @@ export default function ProfileScreen() {
               <Text style={styles.statLabel}>{t('profile.myListings')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.statCard} onPress={() => setShowFavoritesModal(true)}>
+            <TouchableOpacity style={styles.statCard} onPress={() => setShowFavoritesModal(true)} activeOpacity={0.7}>
               <View style={[styles.statIconContainer, { backgroundColor: '#FEE2E2' }]}>
                 <Heart size={24} color="#EF4444" />
               </View>
@@ -347,7 +436,7 @@ export default function ProfileScreen() {
               <Text style={styles.statLabel}>{t('profile.favorites')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.statCard} onPress={() => console.log('Map contributions')}>
+            <TouchableOpacity style={styles.statCard} onPress={handleContributionsPress} activeOpacity={0.7}>
               <View style={[styles.statIconContainer, { backgroundColor: '#D1FAE5' }]}>
                 <MapPin size={24} color="#10B981" />
               </View>
@@ -378,7 +467,10 @@ export default function ProfileScreen() {
 
         {/* User's Pets */}
         {userPets.length > 0 && (
-          <View style={styles.petsSection}>
+          <View
+            style={styles.petsSection}
+            onLayout={(e) => { petsSectionY.current = e.nativeEvent.layout.y; }}
+          >
             <Text style={styles.sectionTitle}>{t('profile.myListings')}</Text>
             <View style={styles.petsGrid}>
               {userPets.map((pet) => (
@@ -443,6 +535,68 @@ export default function ProfileScreen() {
           setSelectedPet(null);
         }}
       />
+
+      {/* Contributions Modal */}
+      <Modal
+        visible={showContributionsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowContributionsModal(false)}
+      >
+        <BlurView intensity={20} style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <SafeAreaView style={styles.modalSafeArea}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderLeft}>
+                  <MapPin size={24} color="#10B981" />
+                  <Text style={styles.modalHeaderTitle}>{t('profile.contributions')}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowContributionsModal(false)} style={styles.modalCloseButton}>
+                  <X size={24} color={theme.colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Content */}
+              {loadingPets ? (
+                <View style={styles.modalLoadingContainer}>
+                  <ActivityIndicator size="large" color="#10B981" />
+                  <Text style={styles.modalLoadingText}>{t('common.loading')}</Text>
+                </View>
+              ) : userContributions.length === 0 ? (
+                <View style={styles.modalEmptyContainer}>
+                  <MapPin size={64} color={theme.colors.text.tertiary} strokeWidth={1} />
+                  <Text style={styles.modalEmptyTitle}>{t('profile.noContributions')}</Text>
+                  <Text style={styles.modalEmptySubtitle}>
+                    {t('profile.noContributionsDesc')}
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={userContributions}
+                  renderItem={({ item }) => (
+                    <View style={styles.contributionItem}>
+                      <View style={[styles.contributionIconContainer, { backgroundColor: getSpotColor(item.type) }]}>
+                        {getSpotIcon(item.type, 20)}
+                      </View>
+                      <View style={styles.contributionInfo}>
+                        <Text style={styles.contributionName}>{item.name || getSpotLabel(item.type, t)}</Text>
+                        <Text style={[styles.contributionType, { color: getSpotColor(item.type) }]}>{getSpotLabel(item.type, t)}</Text>
+                        {item.note && (
+                          <Text style={styles.contributionAddress}>{item.note}</Text>
+                        )}
+                      </View>
+                    </View>
+                  )}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.contributionListContent}
+                  showsVerticalScrollIndicator={true}
+                />
+              )}
+            </SafeAreaView>
+          </View>
+        </BlurView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -698,5 +852,120 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: theme.typography.fontFamily.bodySemiBold,
     color: theme.colors.error[500],
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    width: '95%',
+    height: '80%',
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  modalSafeArea: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.light,
+  },
+  modalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    flex: 1,
+  },
+  modalHeaderTitle: {
+    fontSize: 20,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    color: theme.colors.text.primary,
+  },
+  modalCloseButton: {
+    padding: theme.spacing.xs,
+  },
+  modalLoadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.xl,
+  },
+  modalLoadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.fontSize.base,
+    fontFamily: theme.typography.fontFamily.body,
+    color: theme.colors.text.secondary,
+  },
+  modalEmptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  modalEmptyTitle: {
+    fontSize: 20,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    color: theme.colors.text.primary,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
+  },
+  modalEmptySubtitle: {
+    fontSize: theme.typography.fontSize.base,
+    fontFamily: theme.typography.fontFamily.body,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+  },
+  contributionListContent: {
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
+  },
+  contributionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: theme.spacing.md,
+    borderRadius: 12,
+    marginBottom: theme.spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  contributionIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  contributionInfo: {
+    flex: 1,
+  },
+  contributionName: {
+    fontSize: 16,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    color: theme.colors.text.primary,
+    marginBottom: 2,
+  },
+  contributionType: {
+    fontSize: 13,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    marginBottom: 2,
+  },
+  contributionAddress: {
+    fontSize: 12,
+    fontFamily: theme.typography.fontFamily.body,
+    color: theme.colors.text.secondary,
   },
 });

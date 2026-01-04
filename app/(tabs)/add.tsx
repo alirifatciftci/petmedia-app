@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
@@ -30,6 +32,12 @@ export default function AddScreen() {
   const { user, isAuthenticated } = useAuthStore();
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Refs for auto-scroll to next field
+  const ageInputRef = useRef<View>(null);
+  const sizeInputRef = useRef<View>(null);
+  const breedInputRef = useRef<View>(null);
+
   const [loading, setLoading] = useState(false);
   const [loadingPet, setLoadingPet] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -349,6 +357,25 @@ export default function AddScreen() {
     setImageErrors(prev => ({ ...prev, [species]: true }));
   };
 
+  // Auto-scroll to next field
+  const scrollToNextField = (yOffset: number) => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
+    }, 100);
+  };
+
+  // Handle gender selection with auto-scroll
+  const handleGenderSelect = (selectedSex: PetSex) => {
+    setSex(selectedSex);
+    scrollToNextField(180); // Scroll to age field
+  };
+
+  // Handle size selection with auto-scroll
+  const handleSizeSelect = (selectedSize: PetSize) => {
+    setSize(selectedSize);
+    scrollToNextField(340); // Scroll to breed field
+  };
+
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>{t('addPet.speciesTitle')}</Text>
@@ -414,7 +441,7 @@ export default function AddScreen() {
         <View style={styles.compactOptionsRow}>
           <TouchableOpacity
             style={[styles.compactOptionButton, sex === 'male' && styles.compactOptionButtonActive]}
-            onPress={() => setSex('male')}
+            onPress={() => handleGenderSelect('male')}
             activeOpacity={0.7}
           >
             <Circle size={16} color={sex === 'male' ? theme.colors.primary[500] : theme.colors.text.secondary} fill={sex === 'male' ? theme.colors.primary[500] : 'transparent'} />
@@ -424,7 +451,7 @@ export default function AddScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.compactOptionButton, sex === 'female' && styles.compactOptionButtonActive]}
-            onPress={() => setSex('female')}
+            onPress={() => handleGenderSelect('female')}
             activeOpacity={0.7}
           >
             <Circle size={16} color={sex === 'female' ? theme.colors.primary[500] : theme.colors.text.secondary} fill={sex === 'female' ? theme.colors.primary[500] : 'transparent'} />
@@ -455,7 +482,7 @@ export default function AddScreen() {
               <TouchableOpacity
                 key={s}
                 style={[styles.compactOptionButton, size === s && styles.compactOptionButtonActive]}
-                onPress={() => setSize(s)}
+                onPress={() => handleSizeSelect(s)}
                 activeOpacity={0.7}
               >
                 <IconComponent size={18} color={size === s ? theme.colors.primary[500] : theme.colors.text.secondary} />
@@ -572,7 +599,11 @@ export default function AddScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
 
-      <View style={styles.keyboardView}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <TouchableOpacity
@@ -656,7 +687,7 @@ export default function AddScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
 
       <CityPicker
         visible={cityPickerVisible}
