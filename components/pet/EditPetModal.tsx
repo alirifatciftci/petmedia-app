@@ -79,7 +79,7 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        quality: 0.8, // Same quality as profile photo
+        quality: 0.3,
       });
 
       console.log('Image picker result:', result);

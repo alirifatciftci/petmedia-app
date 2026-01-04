@@ -255,7 +255,6 @@ export class FirebaseStorage {
   static async uploadImage(_storagePath: string, imageUri: string): Promise<string> {
     try {
       console.log('📤 FirebaseStorage.uploadImage: Converting to base64...');
-      console.log('📤 FirebaseStorage.uploadImage: Image URI:', imageUri);
 
       // Check if user is authenticated
       const currentAuth = getAuth();
@@ -264,45 +263,49 @@ export class FirebaseStorage {
         throw new Error('User must be authenticated to upload images');
       }
 
-      // If it's already a data URL (base64), return it directly
+      // If it's already a data URL (base64), check size and return
       if (imageUri.startsWith('data:image')) {
-        console.log('📤 FirebaseStorage.uploadImage: Already a data URL, returning as-is');
+        if (imageUri.length > 800000) {
+          throw new Error('Image too large. Please select a smaller image.');
+        }
         return imageUri;
       }
 
       // If it's already a permanent URL (http/https), return it
       if (imageUri.startsWith('http://') || imageUri.startsWith('https://')) {
-        console.log('📤 FirebaseStorage.uploadImage: Already a web URL, returning as-is');
         return imageUri;
       }
 
       // Read local file as base64
       if (imageUri.startsWith('file://') || imageUri.startsWith('/')) {
-        console.log('📤 FirebaseStorage.uploadImage: Reading local file as base64...');
         const fileInfo = await FileSystem.getInfoAsync(imageUri);
         if (!fileInfo.exists) {
-          throw new Error('File does not exist: ' + imageUri);
+          throw new Error('File does not exist');
+        }
+
+        // Check file size before reading (limit to ~600KB for safety)
+        if (fileInfo.size && fileInfo.size > 600000) {
+          throw new Error('Image too large (max 600KB). Please select a smaller image or reduce quality.');
         }
 
         const base64Data = await FileSystem.readAsStringAsync(imageUri, {
           encoding: 'base64',
         });
 
-        // Create data URL - this is permanent and works everywhere
         const dataUrl = `data:image/jpeg;base64,${base64Data}`;
-        console.log('✅ FirebaseStorage.uploadImage: Base64 conversion complete, length:', dataUrl.length);
 
-        // Warn if image is too large (Firestore limit is 1MB per document)
-        if (dataUrl.length > 900000) {
-          console.warn('⚠️ FirebaseStorage.uploadImage: Image is large, may affect performance');
+        // Final size check
+        if (dataUrl.length > 800000) {
+          throw new Error('Image too large after conversion. Please select a smaller image.');
         }
 
+        console.log('✅ FirebaseStorage.uploadImage: Success, size:', Math.round(dataUrl.length / 1024), 'KB');
         return dataUrl;
       }
 
-      throw new Error('Unsupported image URI format: ' + imageUri.substring(0, 50));
+      throw new Error('Unsupported image format');
     } catch (error) {
-      console.error('❌ FirebaseStorage.uploadImage: Conversion error:', error);
+      console.error('❌ FirebaseStorage.uploadImage error:', error);
       throw error;
     }
   }

@@ -12,7 +12,9 @@
     "noUnusedParameters": false,
     "exactOptionalPropertyTypes": false,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [

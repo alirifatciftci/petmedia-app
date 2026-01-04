@@ -19,7 +19,6 @@ import {
   Heart,
   FileText,
   MapPin,
-  Settings,
   LogOut
 } from 'lucide-react-native';
 import { theme } from '../../theme';
@@ -399,19 +398,8 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Settings & Logout */}
+        {/* Logout */}
         <View style={styles.settingsSection}>
-          <TouchableOpacity
-            style={styles.settingsItem}
-            onPress={() => console.log('Settings')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.settingsIconContainer}>
-              <Settings size={22} color={theme.colors.text.secondary} />
-            </View>
-            <Text style={styles.settingsText}>{t('profile.settings')}</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.logoutItem}
             onPress={logout}
@@ -686,33 +674,6 @@ const styles = StyleSheet.create({
   settingsSection: {
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: 100,
-  },
-  settingsItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    marginBottom: theme.spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  settingsIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  settingsText: {
-    fontSize: 15,
-    fontFamily: theme.typography.fontFamily.bodySemiBold,
-    color: theme.colors.text.primary,
   },
   logoutItem: {
     flexDirection: 'row',

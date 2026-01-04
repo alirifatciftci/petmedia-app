@@ -15,12 +15,13 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { X, Camera, Image as ImageIcon, ArrowLeft, ArrowRight, Circle, Minus, Square, Maximize2, Check } from 'lucide-react-native';
+import { X, Camera, Image as ImageIcon, ArrowLeft, ArrowRight, Circle, Minus, Square, Maximize2, Check, ChevronDown } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 import { PetService, FirebaseStorage } from '../../services/firebase';
 import { PetSpecies, PetSize, PetSex, Pet } from '../../types';
+import { CityPicker } from '../../components/common/CityPicker';
 
 export default function AddScreen() {
   const { t } = useTranslation();
@@ -44,6 +45,7 @@ export default function AddScreen() {
   const [size, setSize] = useState<PetSize | ''>('');
   const [breed, setBreed] = useState('');
   const [city, setCity] = useState('');
+  const [cityPickerVisible, setCityPickerVisible] = useState(false);
   const [vaccinated, setVaccinated] = useState(false);
   const [neutered, setNeutered] = useState(false);
   const [description, setDescription] = useState('');
@@ -136,7 +138,8 @@ export default function AddScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        quality: 0.6,
+        quality: 0.3,
+        allowsEditing: false,
       });
 
       console.log('Image picker result:', result);
@@ -484,12 +487,16 @@ export default function AddScreen() {
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>{t('addPet.city')} *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={t('addPet.cityPlaceholder')}
-          value={city}
-          onChangeText={setCity}
-        />
+        <TouchableOpacity
+          style={styles.citySelector}
+          onPress={() => setCityPickerVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.citySelectorText, !city && styles.citySelectorPlaceholder]}>
+            {city || t('addPet.cityPlaceholder')}
+          </Text>
+          <ChevronDown size={20} color={theme.colors.text.secondary} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.inputGroup}>
@@ -650,6 +657,13 @@ export default function AddScreen() {
           </View>
         </View>
       </View>
+
+      <CityPicker
+        visible={cityPickerVisible}
+        onClose={() => setCityPickerVisible(false)}
+        onSelect={setCity}
+        selectedCity={city}
+      />
     </SafeAreaView>
   );
 }
@@ -896,6 +910,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border.light,
     minHeight: 48,
+  },
+  citySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+    minHeight: 48,
+  },
+  citySelectorText: {
+    fontSize: theme.typography.fontSize.base,
+    fontFamily: theme.typography.fontFamily.body,
+    color: theme.colors.text.primary,
+  },
+  citySelectorPlaceholder: {
+    color: theme.colors.text.tertiary,
   },
   textArea: {
     minHeight: 100,
