@@ -53,22 +53,13 @@ export default {
         origin: false
       },
       // Firebase configuration from environment variables
-      // Set EXPO_PUBLIC_FIREBASE_* in .env file or environment
-      // Fallback values for development (remove in production)
-      firebaseApiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 
-                      (process.env.NODE_ENV !== 'production' ? 'AIzaSyB9zqqbVuCaPO3tL1uMhXcCPi-F7rJmcr0' : ''),
-      firebaseAuthDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 
-                          (process.env.NODE_ENV !== 'production' ? 'petmedia-app-v2.firebaseapp.com' : ''),
-      firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 
-                         (process.env.NODE_ENV !== 'production' ? 'petmedia-app-v2' : ''),
-      firebaseStorageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 
-                              (process.env.NODE_ENV !== 'production' ? 'petmedia-app-v2.firebasestorage.app' : ''),
-      firebaseMessagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 
-                                 (process.env.NODE_ENV !== 'production' ? '17357521540' : ''),
-      firebaseAppId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || 
-                     (process.env.NODE_ENV !== 'production' ? '1:17357521540:web:c7168bf86db8697c5df8d1' : ''),
-      firebaseMeasurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || 
-                             (process.env.NODE_ENV !== 'production' ? 'G-9W68V4VT5D' : ''),
+      firebaseApiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'AIzaSyAvGcePNoIhHJhguLTTlIXMdQWdnouGbYA',
+      firebaseAuthDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'petmediav3.firebaseapp.com',
+      firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'petmediav3',
+      firebaseStorageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'petmediav3.firebasestorage.app',
+      firebaseMessagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '595200415606',
+      firebaseAppId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:595200415606:web:5821eaa2cbf9ce21804c57',
+      firebaseMeasurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-515TXLZX18',
     }
   }
 };

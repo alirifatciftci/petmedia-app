@@ -20,6 +20,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { PetService, FirebaseStorage } from '../../services/firebase';
 import { theme } from '../../theme';
 import { Pet, PetSpecies, PetSize, PetSex } from '../../types';
+import { CityPicker } from '../common/CityPicker';
 
 interface EditPetModalProps {
   visible: boolean;
@@ -44,6 +45,9 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
   const [neutered, setNeutered] = useState(false);
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+
+  // Maksimum fotoğraf sayısı (Firestore 1MB limiti nedeniyle)
+  const MAX_PHOTOS = 3;
 
   // Load pet data when modal opens
   useEffect(() => {
@@ -342,12 +346,10 @@ export const EditPetModal: React.FC<EditPetModalProps> = ({ visible, onClose, pe
             {/* City */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Şehir *</Text>
-              <TextInput
-                style={styles.input}
+              <CityPicker
                 value={city}
-                onChangeText={setCity}
-                placeholder="Örn: İstanbul, Ankara"
-                placeholderTextColor={theme.colors.text.tertiary}
+                onSelect={setCity}
+                placeholder="Şehir seçin"
               />
             </View>
 

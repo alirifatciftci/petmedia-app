@@ -19,13 +19,13 @@ import {
   Heart,
   FileText,
   MapPin,
-  Settings,
   LogOut
 } from 'lucide-react-native';
 import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
 import { FavoritesModal } from '../../components/profile/FavoritesModal';
+import { ContributionsModal } from '../../components/profile/ContributionsModal';
 import { UserProfileService, PetService, MapSpotService } from '../../services/firebase';
 import { PetCard } from '../../components/common/PetCard';
 import { Pet } from '../../types';
@@ -48,6 +48,7 @@ export default function ProfileScreen() {
   const [contributionsCount, setContributionsCount] = useState(0);
   const [loadingCounts, setLoadingCounts] = useState(false);
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
+  const [showContributionsModal, setShowContributionsModal] = useState(false);
 
   const photoURL = user?.photoURL || '';
   const [imageError, setImageError] = useState(false);
@@ -256,7 +257,7 @@ export default function ProfileScreen() {
       title: t('profile.contributions'),
       icon: MapPin,
       count: loadingCounts ? 0 : contributionsCount,
-      onPress: () => console.log('Map contributions'),
+      onPress: () => setShowContributionsModal(true),
     },
   ];
 
@@ -411,23 +412,8 @@ export default function ProfileScreen() {
             ))}
           </View>
 
-          {/* Settings & Logout */}
+          {/* Logout */}
           <View style={styles.settingsCard}>
-            <TouchableOpacity
-              style={styles.settingsItem}
-              onPress={() => console.log('Settings')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.optionLeft}>
-                <View style={[styles.optionIcon, styles.settingsIcon]}>
-                  <Settings size={22} color={theme.colors.text.secondary} strokeWidth={2} />
-                </View>
-                <Text style={styles.optionTitle}>{t('profile.settings')}</Text>
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.divider} />
-
             <TouchableOpacity
               style={styles.settingsItem}
               onPress={logout}
@@ -456,6 +442,14 @@ export default function ProfileScreen() {
         onClose={() => {
           setShowFavoritesModal(false);
           // Reload counts when modal closes
+          loadProfileCounts();
+        }}
+      />
+
+      <ContributionsModal
+        visible={showContributionsModal}
+        onClose={() => {
+          setShowContributionsModal(false);
           loadProfileCounts();
         }}
       />

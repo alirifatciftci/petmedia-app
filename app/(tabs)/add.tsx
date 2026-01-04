@@ -22,6 +22,7 @@ import { theme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 import { PetService, FirebaseStorage } from '../../services/firebase';
 import { PetSpecies, PetSize, PetSex, Pet } from '../../types';
+import { CityPicker } from '../../components/common/CityPicker';
 
 export default function AddScreen() {
   const { t } = useTranslation();
@@ -484,11 +485,10 @@ export default function AddScreen() {
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>{t('addPet.city')} *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={t('addPet.cityPlaceholder')}
+        <CityPicker
           value={city}
-          onChangeText={setCity}
+          onSelect={setCity}
+          placeholder={t('addPet.cityPlaceholder')}
         />
       </View>
 
